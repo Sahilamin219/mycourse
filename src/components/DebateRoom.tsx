@@ -1,15 +1,30 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { VideoCall } from './VideoCall';
+import { WordPuzzle } from './WordPuzzle';
 import { useWebRTC } from '../hooks/useWebRTC';
-import { Video, Loader, AlertCircle } from 'lucide-react';
+import { Video, Loader, AlertCircle, Lightbulb } from 'lucide-react';
 
 interface DebateRoomProps {
   selectedTopic?: string;
 }
 
+const DEBATE_TIPS = [
+  "Listen actively to understand your opponent's perspective",
+  "Support your arguments with concrete examples and evidence",
+  "Stay calm and respectful, even when disagreeing strongly",
+  "Ask clarifying questions to better understand their position",
+  "Acknowledge valid points made by your opponent",
+  "Use 'I' statements to express your views without attacking",
+  "Take a moment to think before responding to complex points",
+  "Focus on the argument, not the person making it",
+  "Be willing to adjust your position when presented with new information",
+  "Summarize key points to ensure mutual understanding"
+];
+
 export function DebateRoom({ selectedTopic }: DebateRoomProps) {
   const [showDebate, setShowDebate] = useState(false);
   const [topic, setTopic] = useState(selectedTopic || '');
+  const [currentTip, setCurrentTip] = useState(0);
 
   const {
     localStream,
@@ -21,6 +36,16 @@ export function DebateRoom({ selectedTopic }: DebateRoomProps) {
     cancelSearch,
     endCall,
   } = useWebRTC();
+
+  useEffect(() => {
+    if (isSearching) {
+      const interval = setInterval(() => {
+        setCurrentTip((prev) => (prev + 1) % DEBATE_TIPS.length);
+      }, 5000);
+
+      return () => clearInterval(interval);
+    }
+  }, [isSearching]);
 
   const handleStartDebate = () => {
     if (!topic) {
@@ -54,24 +79,58 @@ export function DebateRoom({ selectedTopic }: DebateRoomProps) {
 
   if (showDebate && isSearching) {
     return (
-      <div className="fixed inset-0 bg-gray-900 z-50 flex items-center justify-center">
-        <div className="text-center text-white max-w-md px-6">
-          <div className="mb-8">
-            <Loader className="animate-spin mx-auto mb-4" size={64} />
-            <h2 className="text-3xl font-bold mb-4">Finding Debate Partner...</h2>
-            <p className="text-gray-300 mb-2">
-              We're matching you with someone who wants to debate about:
+      <div className="fixed inset-0 bg-gradient-to-br from-gray-900 via-emerald-900 to-gray-900 z-50 flex items-center justify-center p-4">
+        <div className="max-w-4xl w-full">
+          <div className="text-center text-white mb-8">
+            <Loader className="animate-spin mx-auto mb-6 text-emerald-400" size={72} />
+            <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
+              Finding Your Debate Partner
+            </h2>
+            <p className="text-gray-300 mb-4 text-lg">
+              Matching you with someone passionate about:
             </p>
-            <div className="bg-emerald-500 px-6 py-3 rounded-full inline-block font-semibold">
+            <div className="bg-gradient-to-r from-emerald-500 to-teal-500 px-8 py-4 rounded-full inline-block font-bold text-xl shadow-lg">
               {topic}
             </div>
           </div>
-          <button
-            onClick={handleCancelSearch}
-            className="bg-red-500 hover:bg-red-600 text-white px-8 py-3 rounded-lg font-medium transition-colors"
-          >
-            Cancel Search
-          </button>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-emerald-500/20">
+              <div className="flex items-start space-x-3 mb-4">
+                <Lightbulb className="text-yellow-400 flex-shrink-0 mt-1" size={24} />
+                <div>
+                  <h3 className="text-white font-semibold mb-2">Debate Tip</h3>
+                  <p className="text-gray-300 text-sm leading-relaxed animate-fadeIn">
+                    {DEBATE_TIPS[currentTip]}
+                  </p>
+                </div>
+              </div>
+              <div className="flex justify-center space-x-1 mt-4">
+                {DEBATE_TIPS.map((_, idx) => (
+                  <div
+                    key={idx}
+                    className={`h-1 rounded-full transition-all duration-300 ${
+                      idx === currentTip ? 'w-8 bg-emerald-500' : 'w-1 bg-gray-600'
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <WordPuzzle />
+          </div>
+
+          <div className="text-center">
+            <button
+              onClick={handleCancelSearch}
+              className="bg-red-500 hover:bg-red-600 text-white px-10 py-4 rounded-xl font-semibold text-lg transition-all duration-300 hover:scale-105 shadow-xl"
+            >
+              Cancel Search
+            </button>
+            <p className="text-gray-400 text-sm mt-4">
+              Average wait time: 30 seconds
+            </p>
+          </div>
         </div>
       </div>
     );

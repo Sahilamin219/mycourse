@@ -1,6 +1,10 @@
 import { Video, MessageSquare, Star, Users } from 'lucide-react';
 
-export function Hero() {
+interface HeroProps {
+  onStartDebate: () => void;
+}
+
+export function Hero({ onStartDebate }: HeroProps) {
   return (
     <section className="pt-20 pb-16 bg-gradient-to-r from-emerald-600 to-teal-600 relative overflow-hidden">
       <div className="absolute inset-0 bg-black/20"></div>
@@ -26,11 +30,18 @@ export function Hero() {
             </div>
           </div>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white px-8 py-4 rounded-lg font-semibold text-lg flex items-center justify-center space-x-2 mx-auto sm:mx-0 transition-all duration-300 hover:-translate-y-1 shadow-lg">
+            <button
+              onClick={onStartDebate}
+              className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white px-8 py-4 rounded-lg font-semibold text-lg flex items-center justify-center space-x-2 mx-auto sm:mx-0 transition-all duration-300 hover:-translate-y-1 shadow-lg">
               <Video size={24} />
               <span>Start Debating Now</span>
             </button>
-            <button className="bg-white/20 hover:bg-white/30 text-white px-8 py-4 rounded-lg font-semibold text-lg flex items-center justify-center space-x-2 mx-auto sm:mx-0 transition-all duration-300">
+            <button
+              onClick={() => {
+                const element = document.getElementById('topics');
+                element?.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className="bg-white/20 hover:bg-white/30 text-white px-8 py-4 rounded-lg font-semibold text-lg flex items-center justify-center space-x-2 mx-auto sm:mx-0 transition-all duration-300">
               <MessageSquare size={24} />
               <span>Browse Topics</span>
             </button>

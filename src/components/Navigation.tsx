@@ -1,7 +1,11 @@
 import { Menu, Search, Video, MessageSquare } from 'lucide-react';
 import { useState } from 'react';
 
-export function Navigation() {
+interface NavigationProps {
+  onStartDebate: () => void;
+}
+
+export function Navigation({ onStartDebate }: NavigationProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
@@ -39,7 +43,9 @@ export function Navigation() {
               />
               <Search className="absolute right-3 top-2.5 text-white/70" size={18} />
             </div>
-            <button className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white px-6 py-2 rounded-lg font-medium flex items-center space-x-2 transition-all duration-300 hover:-translate-y-0.5 shadow-lg">
+            <button
+              onClick={onStartDebate}
+              className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white px-6 py-2 rounded-lg font-medium flex items-center space-x-2 transition-all duration-300 hover:-translate-y-0.5 shadow-lg">
               <Video size={18} />
               <span>Start Debate</span>
             </button>
@@ -85,7 +91,9 @@ export function Navigation() {
               <button className="w-full bg-emerald-600 text-white py-2 rounded-lg hover:bg-emerald-700 transition-colors">
                 Sign In
               </button>
-              <button className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 py-2 rounded-lg text-white">
+              <button
+                onClick={onStartDebate}
+                className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 py-2 rounded-lg text-white">
                 Start Debate
               </button>
             </div>
