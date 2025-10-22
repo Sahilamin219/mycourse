@@ -4,8 +4,9 @@ from pydantic import BaseModel
 from typing import List, Optional
 import os
 from supabase import create_client, Client
+from ai_analysis import generate_ai_analysis
 
-app = FastAPI(title="LearnHub API", version="1.0.0")
+app = FastAPI(title="DebateHub API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -68,7 +69,7 @@ class Testimonial(BaseModel):
 
 @app.get("/")
 async def root():
-    return {"message": "Welcome to LearnHub API"}
+    return {"message": "Welcome to DebateHub API"}
 
 
 @app.get("/api/categories", response_model=List[Category])
@@ -165,6 +166,82 @@ async def get_stats():
             "expert_instructors": instructors_count,
             "support_available": "24/7"
         }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/debate-sessions")
+async def create_debate_session(data: dict):
+    try:
+        response = supabase.table("debate_sessions").insert({
+            "user_id": data.get("user_id"),
+            "partner_id": data.get("partner_id"),
+            "topic": data.get("topic"),
+        }).execute()
+        return response.data[0]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/debate-sessions/{session_id}")
+async def end_debate_session(session_id: str, data: dict):
+    try:
+        response = supabase.table("debate_sessions").update({
+            "ended_at": data.get("ended_at"),
+            "duration_seconds": data.get("duration_seconds"),
+        }).eq("id", session_id).execute()
+        return response.data[0]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/debate-analysis/{session_id}")
+async def create_debate_analysis(session_id: str, user_id: str):
+    try:
+        transcripts_response = supabase.table("debate_transcripts")\
+            .select("*")\
+            .eq("session_id", session_id)\
+            .execute()
+
+        transcripts = transcripts_response.data
+
+        analysis = await generate_ai_analysis(session_id, user_id, transcripts)
+
+        response = supabase.table("debate_analysis").insert(analysis).execute()
+
+        return response.data[0]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/debate-history/{user_id}")
+async def get_debate_history(user_id: str):
+    try:
+        response = supabase.table("debate_sessions")\
+            .select("*")\
+            .eq("user_id", user_id)\
+            .order("created_at", desc=True)\
+            .limit(20)\
+            .execute()
+        return response.data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/debate-analysis/session/{session_id}")
+async def get_session_analysis(session_id: str):
+    try:
+        response = supabase.table("debate_analysis")\
+            .select("*")\
+            .eq("session_id", session_id)\
+            .execute()
+
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Analysis not found")
+
+        return response.data[0]
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
