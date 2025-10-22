@@ -1,8 +1,8 @@
 import { Navigation } from './components/Navigation';
 import { Hero } from './components/Hero';
 import { Stats } from './components/Stats';
-import { Categories } from './components/Categories';
-import { Courses } from './components/Courses';
+import { DebateTopics } from './components/DebateTopics';
+import { Resources } from './components/Resources';
 import { Testimonials } from './components/Testimonials';
 import { Footer } from './components/Footer';
 
@@ -12,8 +12,8 @@ function App() {
       <Navigation />
       <Hero />
       <Stats />
-      <Categories />
-      <Courses />
+      <DebateTopics />
+      <Resources />
       <Testimonials />
       <Footer />
     </div>

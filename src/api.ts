@@ -1,28 +1,22 @@
-import type { Category, Course, Instructor, Testimonial, Stats } from './types';
+import type { DebateTopic, Resource, Testimonial, Stats } from './types';
 
 const API_URL = 'http://localhost:8000/api';
 
-export async function fetchCategories(): Promise<Category[]> {
-  const response = await fetch(`${API_URL}/categories`);
-  if (!response.ok) throw new Error('Failed to fetch categories');
+export async function fetchDebateTopics(): Promise<DebateTopic[]> {
+  const response = await fetch(`${API_URL}/debate-topics`);
+  if (!response.ok) throw new Error('Failed to fetch debate topics');
   return response.json();
 }
 
-export async function fetchCourses(): Promise<Course[]> {
-  const response = await fetch(`${API_URL}/courses`);
-  if (!response.ok) throw new Error('Failed to fetch courses');
+export async function fetchResources(): Promise<Resource[]> {
+  const response = await fetch(`${API_URL}/resources`);
+  if (!response.ok) throw new Error('Failed to fetch resources');
   return response.json();
 }
 
-export async function fetchCourse(id: string): Promise<Course> {
-  const response = await fetch(`${API_URL}/courses/${id}`);
-  if (!response.ok) throw new Error('Failed to fetch course');
-  return response.json();
-}
-
-export async function fetchInstructors(): Promise<Instructor[]> {
-  const response = await fetch(`${API_URL}/instructors`);
-  if (!response.ok) throw new Error('Failed to fetch instructors');
+export async function fetchResource(id: string): Promise<Resource> {
+  const response = await fetch(`${API_URL}/resources/${id}`);
+  if (!response.ok) throw new Error('Failed to fetch resource');
   return response.json();
 }
 

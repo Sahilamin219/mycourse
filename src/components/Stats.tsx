@@ -37,16 +37,16 @@ export function Stats() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 text-center">
           <div className="transform hover:scale-105 transition-transform">
-            <div className="text-4xl font-bold text-blue-600 mb-2">{stats.courses_available}+</div>
-            <div className="text-gray-600 font-medium">Courses Available</div>
+            <div className="text-4xl font-bold text-emerald-600 mb-2">{stats.total_debates}+</div>
+            <div className="text-gray-600 font-medium">Total Debates</div>
           </div>
           <div className="transform hover:scale-105 transition-transform">
-            <div className="text-4xl font-bold text-green-600 mb-2">{stats.happy_students}+</div>
-            <div className="text-gray-600 font-medium">Happy Students</div>
+            <div className="text-4xl font-bold text-teal-600 mb-2">{stats.active_users}+</div>
+            <div className="text-gray-600 font-medium">Active Users</div>
           </div>
           <div className="transform hover:scale-105 transition-transform">
-            <div className="text-4xl font-bold text-purple-600 mb-2">{stats.expert_instructors}+</div>
-            <div className="text-gray-600 font-medium">Expert Instructors</div>
+            <div className="text-4xl font-bold text-cyan-600 mb-2">{stats.debate_topics}+</div>
+            <div className="text-gray-600 font-medium">Debate Topics</div>
           </div>
           <div className="transform hover:scale-105 transition-transform">
             <div className="text-4xl font-bold text-orange-600 mb-2">{stats.support_available}</div>

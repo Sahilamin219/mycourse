@@ -1,4 +1,4 @@
-import { GraduationCap, Facebook, Twitter, Linkedin, Instagram } from 'lucide-react';
+import { MessageSquare, Facebook, Twitter, Linkedin, Instagram } from 'lucide-react';
 
 export function Footer() {
   return (
@@ -7,11 +7,11 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="md:col-span-2">
             <div className="flex items-center space-x-2 mb-4">
-              <GraduationCap size={28} className="text-blue-400" />
-              <span className="text-2xl font-bold">LearnHub</span>
+              <MessageSquare size={28} className="text-emerald-400" />
+              <span className="text-2xl font-bold">DebateHub</span>
             </div>
             <p className="text-gray-400 mb-6">
-              Your gateway to professional development. Learn from industry experts and transform your career with our comprehensive online courses.
+              Master communication and negotiation through live debates. Connect with strangers worldwide and sharpen your skills in real-time conversations.
             </p>
             <div className="flex space-x-4">
               <a href="#" className="text-gray-400 hover:text-white transition-colors">
@@ -38,13 +38,13 @@ export function Footer() {
                 </a>
               </li>
               <li>
-                <a href="#courses" className="text-gray-400 hover:text-white transition-colors">
-                  Courses
+                <a href="#topics" className="text-gray-400 hover:text-white transition-colors">
+                  Topics
                 </a>
               </li>
               <li>
-                <a href="#categories" className="text-gray-400 hover:text-white transition-colors">
-                  Categories
+                <a href="#resources" className="text-gray-400 hover:text-white transition-colors">
+                  Resources
                 </a>
               </li>
               <li>
@@ -82,7 +82,7 @@ export function Footer() {
           </div>
         </div>
         <div className="border-t border-gray-800 mt-12 pt-8 text-center text-gray-400">
-          <p>&copy; 2024 LearnHub. All rights reserved.</p>
+          <p>&copy; 2024 DebateHub. All rights reserved.</p>
         </div>
       </div>
     </footer>
