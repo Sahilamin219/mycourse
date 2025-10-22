@@ -10,16 +10,24 @@ const ICE_SERVERS = {
   ],
 };
 
+export interface MatchRequest {
+  partnerId: string;
+  partnerEmail: string;
+  topic: string;
+}
+
 export function useWebRTC() {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [matchRequest, setMatchRequest] = useState<MatchRequest | null>(null);
 
   const socketRef = useRef<Socket | null>(null);
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const partnerIdRef = useRef<string | null>(null);
+  const pendingMatchRef = useRef<MatchRequest | null>(null);
 
   useEffect(() => {
     socketRef.current = io(SOCKET_URL, {
@@ -30,13 +38,27 @@ export function useWebRTC() {
       console.log('Connected to signaling server:', data.sid);
     });
 
+    socketRef.current.on('match-request', (data: MatchRequest) => {
+      console.log('Match request received:', data);
+      pendingMatchRef.current = data;
+      setMatchRequest(data);
+    });
+
     socketRef.current.on('match-found', async (data) => {
       console.log('Match found:', data);
       partnerIdRef.current = data.partnerId;
       setIsSearching(false);
       setIsConnected(true);
+      setMatchRequest(null);
 
       await setupPeerConnection(data.initiator);
+    });
+
+    socketRef.current.on('match-rejected', () => {
+      console.log('Match was rejected');
+      setMatchRequest(null);
+      pendingMatchRef.current = null;
+      setIsSearching(true);
     });
 
     socketRef.current.on('waiting', (data) => {
@@ -149,14 +171,34 @@ export function useWebRTC() {
     }
   };
 
-  const startSearch = (topic: string = 'general') => {
+  const startSearch = (topic: string = 'general', email: string = 'Anonymous') => {
     setIsSearching(true);
     setError(null);
-    socketRef.current?.emit('find-match', { topic });
+    socketRef.current?.emit('find_match', { topic, email });
+  };
+
+  const acceptMatch = () => {
+    if (pendingMatchRef.current) {
+      socketRef.current?.emit('accept_match', {
+        partnerId: pendingMatchRef.current.partnerId
+      });
+      setMatchRequest(null);
+    }
+  };
+
+  const rejectMatch = () => {
+    if (pendingMatchRef.current) {
+      socketRef.current?.emit('reject_match', {
+        partnerId: pendingMatchRef.current.partnerId
+      });
+      setMatchRequest(null);
+      pendingMatchRef.current = null;
+    }
   };
 
   const cancelSearch = () => {
     setIsSearching(false);
+    setMatchRequest(null);
     socketRef.current?.emit('cancel_search', {});
   };
 
@@ -192,7 +234,10 @@ export function useWebRTC() {
     isSearching,
     isConnected,
     error,
+    matchRequest,
     startSearch,
+    acceptMatch,
+    rejectMatch,
     cancelSearch,
     endCall,
   };

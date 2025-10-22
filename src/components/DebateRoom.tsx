@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { VideoCall } from './VideoCall';
 import { WordPuzzle } from './WordPuzzle';
 import { useWebRTC } from '../hooks/useWebRTC';
-import { Video, Loader, AlertCircle, Lightbulb } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { Video, Loader, AlertCircle, Lightbulb, UserCheck, UserX } from 'lucide-react';
 
 interface DebateRoomProps {
   selectedTopic?: string;
@@ -26,13 +27,18 @@ export function DebateRoom({ selectedTopic }: DebateRoomProps) {
   const [topic, setTopic] = useState(selectedTopic || '');
   const [currentTip, setCurrentTip] = useState(0);
 
+  const { user } = useAuth();
+
   const {
     localStream,
     remoteStream,
     isSearching,
     isConnected,
     error,
+    matchRequest,
     startSearch,
+    acceptMatch,
+    rejectMatch,
     cancelSearch,
     endCall,
   } = useWebRTC();
@@ -53,7 +59,7 @@ export function DebateRoom({ selectedTopic }: DebateRoomProps) {
       return;
     }
     setShowDebate(true);
-    startSearch(topic);
+    startSearch(topic, user?.email || 'Anonymous');
   };
 
   const handleEndCall = () => {
@@ -66,6 +72,14 @@ export function DebateRoom({ selectedTopic }: DebateRoomProps) {
     setShowDebate(false);
   };
 
+  const handleAcceptMatch = () => {
+    acceptMatch();
+  };
+
+  const handleRejectMatch = () => {
+    rejectMatch();
+  };
+
   if (showDebate && isConnected) {
     return (
       <VideoCall
@@ -74,6 +88,57 @@ export function DebateRoom({ selectedTopic }: DebateRoomProps) {
         onEndCall={handleEndCall}
         topic={topic}
       />
+    );
+  }
+
+  if (showDebate && matchRequest) {
+    return (
+      <div className="fixed inset-0 bg-gradient-to-br from-gray-900 via-emerald-900 to-gray-900 z-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
+          <div className="text-center mb-6">
+            <div className="w-20 h-20 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full mx-auto mb-4 flex items-center justify-center">
+              <UserCheck className="text-white" size={40} />
+            </div>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">Match Found!</h2>
+            <p className="text-gray-600">Someone wants to debate with you</p>
+          </div>
+
+          <div className="bg-gray-50 rounded-xl p-6 mb-6">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600 font-medium">Partner:</span>
+                <span className="text-gray-900 font-semibold">{matchRequest.partnerEmail}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600 font-medium">Topic:</span>
+                <span className="text-emerald-600 font-semibold">{matchRequest.topic}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <button
+              onClick={handleAcceptMatch}
+              className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white py-4 rounded-xl font-semibold text-lg transition-all duration-300 flex items-center justify-center space-x-2 shadow-lg"
+            >
+              <UserCheck size={24} />
+              <span>Accept & Start Debate</span>
+            </button>
+
+            <button
+              onClick={handleRejectMatch}
+              className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-4 rounded-xl font-semibold text-lg transition-all duration-300 flex items-center justify-center space-x-2"
+            >
+              <UserX size={24} />
+              <span>Decline</span>
+            </button>
+          </div>
+
+          <p className="text-xs text-gray-500 text-center mt-4">
+            This match was found based on your selected topic
+          </p>
+        </div>
+      </div>
     );
   }
 
@@ -128,7 +193,7 @@ export function DebateRoom({ selectedTopic }: DebateRoomProps) {
               Cancel Search
             </button>
             <p className="text-gray-400 text-sm mt-4">
-              Average wait time: 30 seconds
+              Waiting for a match...
             </p>
           </div>
         </div>

@@ -14,9 +14,10 @@ sio = socketio.AsyncServer(
 app = web.Application()
 sio.attach(app)
 
-waiting_users: Set[str] = set()
+waiting_users: Dict[str, Dict] = {}
 rooms: Dict[str, Set[str]] = {}
 user_rooms: Dict[str, str] = {}
+user_info: Dict[str, Dict] = {}
 
 
 @sio.event
@@ -30,7 +31,7 @@ async def disconnect(sid):
     print(f'Client disconnected: {sid}')
 
     if sid in waiting_users:
-        waiting_users.remove(sid)
+        del waiting_users[sid]
 
     if sid in user_rooms:
         room_id = user_rooms[sid]
@@ -45,49 +46,102 @@ async def disconnect(sid):
 
         del user_rooms[sid]
 
+    if sid in user_info:
+        del user_info[sid]
+
 
 @sio.event
-async def find-match(sid, data):
+async def find_match(sid, data):
     """Find a debate partner"""
     topic = data.get('topic', 'general')
+    user_email = data.get('email', 'Anonymous')
 
-    print(f'User {sid} looking for match on topic: {topic}')
+    print(f'User {sid} ({user_email}) looking for match on topic: {topic}')
 
-    if waiting_users:
-        partner_sid = waiting_users.pop()
+    user_info[sid] = {'email': user_email, 'topic': topic}
 
-        room_id = str(uuid.uuid4())
-        rooms[room_id] = {sid, partner_sid}
-        user_rooms[sid] = room_id
-        user_rooms[partner_sid] = room_id
+    matched = False
+    for waiting_sid, waiting_data in list(waiting_users.items()):
+        if waiting_data['topic'] == topic and waiting_sid != sid:
+            partner_sid = waiting_sid
+            del waiting_users[partner_sid]
 
-        await sio.enter_room(sid, room_id)
-        await sio.enter_room(partner_sid, room_id)
+            partner_email = user_info.get(partner_sid, {}).get('email', 'Anonymous')
 
-        await sio.emit('match-found', {
-            'roomId': room_id,
-            'partnerId': partner_sid,
-            'initiator': True
-        }, room=sid)
+            await sio.emit('match-request', {
+                'partnerId': sid,
+                'partnerEmail': user_email,
+                'topic': topic
+            }, room=partner_sid)
 
-        await sio.emit('match-found', {
-            'roomId': room_id,
-            'partnerId': sid,
-            'initiator': False
-        }, room=partner_sid)
+            await sio.emit('match-request', {
+                'partnerId': partner_sid,
+                'partnerEmail': partner_email,
+                'topic': topic
+            }, room=sid)
 
-        print(f'Match created: {sid} <-> {partner_sid} in room {room_id}')
-    else:
-        waiting_users.add(sid)
-        await sio.emit('waiting', {'message': 'Looking for a debate partner...'}, room=sid)
-        print(f'User {sid} added to waiting list')
+            print(f'Match request sent: {sid} ({user_email}) <-> {partner_sid} ({partner_email}) on topic: {topic}')
+            matched = True
+            break
+
+    if not matched:
+        waiting_users[sid] = {'topic': topic, 'email': user_email}
+        await sio.emit('waiting', {'message': f'Looking for a debate partner on {topic}...'}, room=sid)
+        print(f'User {sid} ({user_email}) added to waiting list for topic: {topic}')
+
+
+@sio.event
+async def accept_match(sid, data):
+    """Accept a match with a partner"""
+    partner_sid = data.get('partnerId')
+
+    if not partner_sid:
+        return
+
+    room_id = str(uuid.uuid4())
+    rooms[room_id] = {sid, partner_sid}
+    user_rooms[sid] = room_id
+    user_rooms[partner_sid] = room_id
+
+    await sio.enter_room(sid, room_id)
+    await sio.enter_room(partner_sid, room_id)
+
+    await sio.emit('match-found', {
+        'roomId': room_id,
+        'partnerId': partner_sid,
+        'initiator': True
+    }, room=sid)
+
+    await sio.emit('match-found', {
+        'roomId': room_id,
+        'partnerId': sid,
+        'initiator': False
+    }, room=partner_sid)
+
+    print(f'Match accepted: {sid} <-> {partner_sid} in room {room_id}')
+
+
+@sio.event
+async def reject_match(sid, data):
+    """Reject a match with a partner"""
+    partner_sid = data.get('partnerId')
+
+    await sio.emit('match-rejected', {}, room=partner_sid)
+    await sio.emit('match-rejected', {}, room=sid)
+
+    print(f'Match rejected: {sid} rejected {partner_sid}')
+
+    if sid in user_info:
+        topic = user_info[sid]['topic']
+        email = user_info[sid]['email']
+        waiting_users[sid] = {'topic': topic, 'email': email}
 
 
 @sio.event
 async def cancel_search(sid, data):
     """Cancel the search for a partner"""
     if sid in waiting_users:
-        waiting_users.remove(sid)
+        del waiting_users[sid]
         await sio.emit('search-cancelled', {}, room=sid)
         print(f'User {sid} cancelled search')
 
@@ -173,4 +227,6 @@ app.router.add_get('/', index)
 
 
 if __name__ == '__main__':
+    print('Starting WebSocket Server on port 8001...')
+    print('Waiting for connections...')
     web.run_app(app, host='0.0.0.0', port=8001)
