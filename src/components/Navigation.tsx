@@ -1,12 +1,15 @@
-import { Menu, Search, Video, MessageSquare } from 'lucide-react';
+import { Menu, Search, Video, MessageSquare, LogOut, User } from 'lucide-react';
 import { useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 
 interface NavigationProps {
   onStartDebate: () => void;
+  onSignIn: () => void;
 }
 
-export function Navigation({ onStartDebate }: NavigationProps) {
+export function Navigation({ onStartDebate, onSignIn }: NavigationProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { user, signOut } = useAuth();
 
   return (
     <nav className="bg-gradient-to-r from-emerald-600 to-teal-600 shadow-lg fixed w-full z-50">
@@ -49,9 +52,26 @@ export function Navigation({ onStartDebate }: NavigationProps) {
               <Video size={18} />
               <span>Start Debate</span>
             </button>
-            <button className="bg-white/20 hover:bg-white/30 text-white px-6 py-2 rounded-lg font-medium transition-all duration-300">
-              Sign In
-            </button>
+            {user ? (
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2 text-white">
+                  <User size={18} />
+                  <span className="text-sm">{user.email}</span>
+                </div>
+                <button
+                  onClick={() => signOut()}
+                  className="bg-white/20 hover:bg-white/30 text-white px-6 py-2 rounded-lg font-medium transition-all duration-300 flex items-center space-x-2">
+                  <LogOut size={18} />
+                  <span>Sign Out</span>
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={onSignIn}
+                className="bg-white/20 hover:bg-white/30 text-white px-6 py-2 rounded-lg font-medium transition-all duration-300">
+                Sign In
+              </button>
+            )}
           </div>
 
           <div className="md:hidden flex items-center">
@@ -88,9 +108,24 @@ export function Navigation({ onStartDebate }: NavigationProps) {
               />
             </div>
             <div className="px-3 space-y-2 pt-2">
-              <button className="w-full bg-emerald-600 text-white py-2 rounded-lg hover:bg-emerald-700 transition-colors">
-                Sign In
-              </button>
+              {user ? (
+                <>
+                  <div className="text-center text-gray-700 py-2">
+                    {user.email}
+                  </div>
+                  <button
+                    onClick={() => signOut()}
+                    className="w-full bg-red-500 text-white py-2 rounded-lg hover:bg-red-600 transition-colors">
+                    Sign Out
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={onSignIn}
+                  className="w-full bg-emerald-600 text-white py-2 rounded-lg hover:bg-emerald-700 transition-colors">
+                  Sign In
+                </button>
+              )}
               <button
                 onClick={onStartDebate}
                 className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 py-2 rounded-lg text-white">
