@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Navigation } from './components/Navigation';
 import { Hero } from './components/Hero';
+import { HowItWorks } from './components/HowItWorks';
 import { Stats } from './components/Stats';
 import { DebateTopics } from './components/DebateTopics';
 import { DebateRoom } from './components/DebateRoom';
@@ -51,6 +52,7 @@ function App() {
         onUpgrade={handleUpgrade}
       />
       <Hero onStartDebate={handleStartDebate} />
+      <HowItWorks />
       <Stats />
       <DebateTopics />
       {showDebateRoom && <DebateRoom />}
