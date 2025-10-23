@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { VideoCall } from './VideoCall';
 import { WordPuzzle } from './WordPuzzle';
 import { useWebRTC } from '../hooks/useWebRTC';
 import { useAuth } from '../contexts/AuthContext';
+import { useSubscription } from '../hooks/useSubscription';
 import { Video, Loader, AlertCircle, Lightbulb, UserCheck, UserX } from 'lucide-react';
 
 interface DebateRoomProps {
@@ -28,6 +29,9 @@ export function DebateRoom({ selectedTopic }: DebateRoomProps) {
   const [currentTip, setCurrentTip] = useState(0);
 
   const { user } = useAuth();
+  const { trackDebateSession, endDebateSession } = useSubscription();
+  const sessionIdRef = useRef<string | null>(null);
+  const sessionStartRef = useRef<number | null>(null);
 
   const {
     localStream,
@@ -62,22 +66,33 @@ export function DebateRoom({ selectedTopic }: DebateRoomProps) {
     startSearch(topic, user?.email || 'Anonymous');
   };
 
-  const handleEndCall = () => {
-    endCall();
-    setShowDebate(false);
-  };
-
   const handleCancelSearch = () => {
     cancelSearch();
     setShowDebate(false);
   };
 
-  const handleAcceptMatch = () => {
+  const handleAcceptMatch = async () => {
+    const session = await trackDebateSession(topic, matchRequest?.partnerId);
+    if (session) {
+      sessionIdRef.current = session.id;
+      sessionStartRef.current = Date.now();
+    }
     acceptMatch();
   };
 
   const handleRejectMatch = () => {
     rejectMatch();
+  };
+
+  const handleEndCall = async () => {
+    if (sessionIdRef.current && sessionStartRef.current) {
+      const durationSeconds = Math.floor((Date.now() - sessionStartRef.current) / 1000);
+      await endDebateSession(sessionIdRef.current, durationSeconds);
+      sessionIdRef.current = null;
+      sessionStartRef.current = null;
+    }
+    endCall();
+    setShowDebate(false);
   };
 
   if (showDebate && isConnected) {

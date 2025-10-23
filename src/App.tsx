@@ -8,16 +8,24 @@ import { Resources } from './components/Resources';
 import { Testimonials } from './components/Testimonials';
 import { Footer } from './components/Footer';
 import { AuthModal } from './components/AuthModal';
+import { PricingModal } from './components/PricingModal';
 import { useAuth } from './contexts/AuthContext';
+import { useSubscription } from './hooks/useSubscription';
 
 function App() {
   const [showDebateRoom, setShowDebateRoom] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showPricingModal, setShowPricingModal] = useState(false);
   const { user } = useAuth();
+  const { canMakeCall, refetch } = useSubscription();
 
   const handleStartDebate = () => {
     if (!user) {
       setShowAuthModal(true);
+      return;
+    }
+    if (!canMakeCall) {
+      setShowPricingModal(true);
       return;
     }
     setShowDebateRoom(true);
@@ -27,9 +35,21 @@ function App() {
     }, 100);
   };
 
+  const handleUpgrade = () => {
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
+    setShowPricingModal(true);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navigation onStartDebate={handleStartDebate} onSignIn={() => setShowAuthModal(true)} />
+      <Navigation
+        onStartDebate={handleStartDebate}
+        onSignIn={() => setShowAuthModal(true)}
+        onUpgrade={handleUpgrade}
+      />
       <Hero onStartDebate={handleStartDebate} />
       <Stats />
       <DebateTopics />
@@ -38,6 +58,14 @@ function App() {
       <Testimonials />
       <Footer />
       <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
+      <PricingModal
+        isOpen={showPricingModal}
+        onClose={() => setShowPricingModal(false)}
+        onSuccess={() => {
+          refetch();
+          setShowPricingModal(false);
+        }}
+      />
     </div>
   );
 }

@@ -1,15 +1,18 @@
-import { Menu, Search, Video, MessageSquare, LogOut, User } from 'lucide-react';
+import { Menu, Search, Video, MessageSquare, LogOut, User, Crown } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useSubscription } from '../hooks/useSubscription';
 
 interface NavigationProps {
   onStartDebate: () => void;
   onSignIn: () => void;
+  onUpgrade: () => void;
 }
 
-export function Navigation({ onStartDebate, onSignIn }: NavigationProps) {
+export function Navigation({ onStartDebate, onSignIn, onUpgrade }: NavigationProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, signOut } = useAuth();
+  const { isPremium, dailyCallCount } = useSubscription();
 
   return (
     <nav className="bg-gradient-to-r from-emerald-600 to-teal-600 shadow-lg fixed w-full z-50">
@@ -54,6 +57,22 @@ export function Navigation({ onStartDebate, onSignIn }: NavigationProps) {
             </button>
             {user ? (
               <div className="flex items-center space-x-4">
+                {isPremium ? (
+                  <div className="flex items-center space-x-2 bg-gradient-to-r from-yellow-400 to-orange-400 px-4 py-2 rounded-lg">
+                    <Crown size={18} className="text-white" />
+                    <span className="text-white font-semibold text-sm">Premium</span>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-end">
+                    <button
+                      onClick={onUpgrade}
+                      className="flex items-center space-x-2 bg-gradient-to-r from-yellow-400 to-orange-400 hover:from-yellow-500 hover:to-orange-500 px-4 py-2 rounded-lg font-medium text-white transition-all duration-300">
+                      <Crown size={18} />
+                      <span>Upgrade</span>
+                    </button>
+                    <span className="text-white/80 text-xs mt-1">{dailyCallCount}/2 calls today</span>
+                  </div>
+                )}
                 <div className="flex items-center space-x-2 text-white">
                   <User size={18} />
                   <span className="text-sm">{user.email}</span>
