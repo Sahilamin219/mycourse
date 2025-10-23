@@ -177,8 +177,9 @@ export function PricingModal({ isOpen, onClose, onSuccess }: PricingModalProps) 
   ];
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-[#001a1a] rounded-2xl shadow-2xl max-w-4xl w-full relative my-8 border border-emerald-500/20">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 overflow-y-auto">
+      <div className="min-h-screen flex items-center justify-center p-4 py-8">
+      <div className="bg-[#001a1a] rounded-2xl shadow-2xl max-w-4xl w-full relative border border-emerald-500/20">
         <button
           onClick={onClose}
           className="absolute top-6 right-6 text-gray-400 hover:text-white transition-colors z-10"
@@ -296,7 +297,7 @@ export function PricingModal({ isOpen, onClose, onSuccess }: PricingModalProps) 
                           setDiscountError('');
                           setDiscountApplied(false);
                         }}
-                        placeholder="HAPPY10"
+                        placeholder="Enter coupon code"
                         className="flex-1 px-4 py-2.5 rounded-lg bg-white/5 text-white placeholder-gray-500 border border-white/10 focus:border-emerald-500/50 focus:outline-none transition-all duration-300"
                         disabled={discountApplied}
                       />
@@ -388,6 +389,7 @@ export function PricingModal({ isOpen, onClose, onSuccess }: PricingModalProps) 
             </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

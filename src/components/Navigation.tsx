@@ -1,4 +1,4 @@
-import { Menu, X, Video, MessageSquare, LogOut, User, Crown, Sparkles, Search } from 'lucide-react';
+import { Menu, X, Video, MessageSquare, LogOut, User, Crown, Sparkles, Search, LayoutDashboard } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSubscription } from '../hooks/useSubscription';
@@ -7,9 +7,10 @@ interface NavigationProps {
   onStartDebate: () => void;
   onSignIn: () => void;
   onUpgrade: () => void;
+  onDashboard?: () => void;
 }
 
-export function Navigation({ onStartDebate, onSignIn, onUpgrade }: NavigationProps) {
+export function Navigation({ onStartDebate, onSignIn, onUpgrade, onDashboard }: NavigationProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
   const { user, signOut } = useAuth();
@@ -102,6 +103,12 @@ export function Navigation({ onStartDebate, onSignIn, onUpgrade }: NavigationPro
                       </div>
                     </div>
                     <button
+                      onClick={onDashboard}
+                      className="w-full px-4 py-3 text-left text-gray-300 hover:text-white hover:bg-white/5 transition-all duration-300 flex items-center space-x-2">
+                      <LayoutDashboard size={18} />
+                      <span>Dashboard</span>
+                    </button>
+                    <button
                       onClick={() => signOut()}
                       className="w-full px-4 py-3 text-left text-gray-300 hover:text-white hover:bg-white/5 transition-all duration-300 flex items-center space-x-2">
                       <LogOut size={18} />
@@ -185,6 +192,15 @@ export function Navigation({ onStartDebate, onSignIn, onUpgrade }: NavigationPro
                     className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-4 py-3 rounded-lg font-semibold mb-3 flex items-center justify-center space-x-2">
                     <Video size={18} />
                     <span>Start Debate</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      onDashboard?.();
+                      setMobileMenuOpen(false);
+                    }}
+                    className="w-full bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white px-4 py-3 rounded-lg transition-all duration-300 mb-3 flex items-center justify-center space-x-2">
+                    <LayoutDashboard size={18} />
+                    <span>Dashboard</span>
                   </button>
                   <button
                     onClick={() => {
