@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Check, Crown, Loader, Star, Zap, Trophy, Target, Brain, Users, Video, BarChart, BookOpen, Award, Tag, CheckCircle } from 'lucide-react';
+import { X, Check, Shield, Loader, Lock, Tag, CheckCircle, Sparkles } from 'lucide-react';
 import { useAuth, supabase } from '../contexts/AuthContext';
 
 interface PricingModalProps {
@@ -127,7 +127,7 @@ export function PricingModal({ isOpen, onClose, onSuccess }: PricingModalProps) 
               throw new Error(verifyData.error || 'Payment verification failed');
             }
 
-            alert('🎉 Welcome to Premium! Your account has been upgraded successfully.');
+            alert('Welcome to Premium! Your account has been upgraded successfully.');
             onSuccess?.();
             onClose();
           } catch (err: any) {
@@ -163,44 +163,56 @@ export function PricingModal({ isOpen, onClose, onSuccess }: PricingModalProps) 
     }
   };
 
-  return (
-    <>
-      <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto">
-        <div className="bg-gradient-to-br from-gray-900 via-emerald-900 to-gray-900 rounded-3xl shadow-2xl max-w-7xl w-full p-8 md:p-12 relative my-8">
-          <button
-            onClick={onClose}
-            className="absolute top-6 right-6 text-white/60 hover:text-white transition-colors z-10"
-          >
-            <X size={28} />
-          </button>
+  const features = [
+    'Unlimited video debates',
+    'Real-time AI feedback',
+    'Advanced speech analytics',
+    'Session recordings',
+    'Progress tracking',
+    'Skill-based scoring',
+    'Achievement system',
+    'Global leaderboard',
+    'Priority matching',
+    'Download transcripts'
+  ];
 
+  return (
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+      <div className="bg-[#001a1a] rounded-2xl shadow-2xl max-w-4xl w-full relative my-8 border border-emerald-500/20">
+        <button
+          onClick={onClose}
+          className="absolute top-6 right-6 text-gray-400 hover:text-white transition-colors z-10"
+        >
+          <X size={24} />
+        </button>
+
+        <div className="p-8 md:p-12">
           <div className="text-center mb-12">
-            <div className="inline-flex items-center space-x-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-6 py-2 rounded-full mb-6 font-bold text-sm">
-              <Star size={18} className="animate-pulse" />
-              <span>LIMITED TIME OFFER - 50% OFF!</span>
-              <Star size={18} className="animate-pulse" />
+            <div className="inline-flex items-center space-x-2 bg-emerald-500/10 border border-emerald-500/30 px-4 py-2 rounded-full mb-6">
+              <Sparkles size={16} className="text-emerald-400" />
+              <span className="text-emerald-300 text-sm font-medium">Premium Membership</span>
             </div>
-            <h2 className="text-5xl md:text-6xl font-black text-white mb-4 bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-400 bg-clip-text text-transparent">
-              Become a Debate Master
+            <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
+              Upgrade to Premium
             </h2>
-            <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-              Join thousands of successful professionals who transformed their communication skills with our AI-powered platform
+            <p className="text-xl text-gray-400">
+              Unlock unlimited debates and AI-powered insights
             </p>
           </div>
 
           {error && (
-            <div className="bg-red-500/20 border-2 border-red-500 text-red-200 px-6 py-4 rounded-xl text-sm mb-8 backdrop-blur-sm">
+            <div className="bg-red-500/10 border border-red-500/50 text-red-300 px-4 py-3 rounded-lg text-sm mb-8">
               {error}
             </div>
           )}
 
           <div className="flex justify-center mb-10">
-            <div className="bg-gray-800/50 backdrop-blur-sm p-2 rounded-2xl inline-flex">
+            <div className="bg-white/5 backdrop-blur-sm p-1.5 rounded-xl inline-flex border border-white/10">
               <button
                 onClick={() => setSelectedPlan('monthly')}
-                className={`px-8 py-3 rounded-xl font-semibold transition-all duration-300 ${
+                className={`px-8 py-3 rounded-lg font-medium transition-all duration-300 ${
                   selectedPlan === 'monthly'
-                    ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg'
+                    ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/20'
                     : 'text-gray-400 hover:text-white'
                 }`}
               >
@@ -208,280 +220,175 @@ export function PricingModal({ isOpen, onClose, onSuccess }: PricingModalProps) 
               </button>
               <button
                 onClick={() => setSelectedPlan('yearly')}
-                className={`px-8 py-3 rounded-xl font-semibold transition-all duration-300 relative ${
+                className={`px-8 py-3 rounded-lg font-medium transition-all duration-300 relative ${
                   selectedPlan === 'yearly'
-                    ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg'
+                    ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/20'
                     : 'text-gray-400 hover:text-white'
                 }`}
               >
                 Yearly
-                <span className="absolute -top-2 -right-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xs px-2 py-1 rounded-full font-bold">
-                  SAVE ₹{yearlySavings}
-                </span>
+                {selectedPlan === 'yearly' && (
+                  <span className="absolute -top-2 -right-2 bg-emerald-500 text-white text-xs px-2 py-0.5 rounded-full font-semibold">
+                    Save 17%
+                  </span>
+                )}
               </button>
             </div>
           </div>
 
-          <div className="grid lg:grid-cols-3 gap-8 mb-12">
-            <div className="bg-gray-800/30 backdrop-blur-sm rounded-2xl p-8 border-2 border-gray-700">
-              <div className="text-center mb-6">
-                <h3 className="text-2xl font-bold text-white mb-2">Free</h3>
-                <div className="text-5xl font-black text-white mb-2">
-                  ₹0
-                </div>
-                <p className="text-gray-400">Forever</p>
-              </div>
-              <ul className="space-y-4">
-                {[
-                  '2 debates per day',
-                  'Basic video quality',
-                  'Access to all topics',
-                  'Limited to 15 min debates'
-                ].map((feature, idx) => (
-                  <li key={idx} className="flex items-start space-x-3">
-                    <Check className="text-emerald-500 flex-shrink-0 mt-0.5" size={20} />
-                    <span className="text-gray-300">{feature}</span>
-                  </li>
-                ))}
-                {[
-                  'No AI feedback',
-                  'No recordings',
-                  'No achievements',
-                  'No leaderboard access'
-                ].map((feature, idx) => (
-                  <li key={idx} className="flex items-start space-x-3 opacity-40">
-                    <X className="text-gray-600 flex-shrink-0 mt-0.5" size={20} />
-                    <span className="text-gray-500 line-through">{feature}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="bg-gradient-to-br from-emerald-600 to-teal-600 rounded-3xl p-8 border-4 border-yellow-400 relative transform lg:scale-110 shadow-2xl">
-              <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-6 py-2 rounded-full font-bold text-sm flex items-center space-x-2 shadow-lg">
-                  <Crown size={18} />
-                  <span>MOST POPULAR</span>
+          <div className="bg-gradient-to-br from-emerald-500/5 to-teal-500/5 backdrop-blur-sm rounded-2xl p-8 md:p-10 border border-emerald-500/20 mb-8">
+            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-8">
+              <div className="flex-1">
+                <h3 className="text-2xl font-semibold text-white mb-6">Premium Features</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {features.map((feature, idx) => (
+                    <div key={idx} className="flex items-center space-x-3">
+                      <Check className="text-emerald-400 flex-shrink-0" size={18} />
+                      <span className="text-gray-300 text-sm">{feature}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
 
-              <div className="text-center mb-8 mt-4">
-                <h3 className="text-3xl font-bold text-white mb-4">Premium</h3>
-                {discountApplied ? (
-                  <div>
-                    <div className="text-3xl line-through text-white/50 mb-1">
-                      ₹{selectedPlan === 'monthly' ? monthlyPrice : Math.floor(yearlyPrice / 12)}
-                    </div>
-                    <div className="text-6xl font-black text-white mb-2">
-                      ₹{selectedPlan === 'monthly' ? finalPrice : Math.floor(finalPrice / 12)}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-6xl font-black text-white mb-2">
-                    ₹{selectedPlan === 'monthly' ? monthlyPrice : Math.floor(yearlyPrice / 12)}
-                  </div>
-                )}
-                <p className="text-emerald-100 text-lg">
-                  per month {selectedPlan === 'yearly' && '(billed yearly)'}
-                </p>
-                {selectedPlan === 'yearly' && (
-                  <div className="mt-3 inline-block bg-yellow-400 text-gray-900 px-4 py-1 rounded-full font-bold text-sm">
-                    Save ₹{yearlySavings}/year
-                  </div>
-                )}
-                {discountApplied && (
-                  <div className="mt-2 inline-flex items-center space-x-2 bg-emerald-500/30 border border-emerald-400 text-emerald-100 px-4 py-2 rounded-full font-bold text-sm">
-                    <Tag size={16} />
-                    <span>10% OFF Applied!</span>
-                  </div>
-                )}
-              </div>
-
-              <div className="mb-6">
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 mb-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-emerald-100 text-sm">Base Price:</span>
-                    <span className="text-white font-semibold">₹{selectedPlan === 'monthly' ? monthlyPrice : yearlyPrice}</span>
-                  </div>
-                  {discountApplied && (
-                    <>
-                      <div className="flex items-center justify-between mb-2 text-emerald-300">
-                        <span className="text-sm flex items-center space-x-1">
-                          <Tag size={14} />
-                          <span>Discount (10%):</span>
-                        </span>
-                        <span className="font-semibold">-₹{discountAmount}</span>
+              <div className="md:w-80 flex-shrink-0">
+                <div className="bg-[#002222] rounded-xl p-6 border border-emerald-500/30">
+                  <div className="text-center mb-6">
+                    {discountApplied ? (
+                      <div>
+                        <div className="text-2xl line-through text-gray-500 mb-1">
+                          ₹{selectedPlan === 'monthly' ? monthlyPrice : yearlyPrice}
+                        </div>
+                        <div className="text-5xl font-bold text-white mb-2">
+                          ₹{finalPrice}
+                        </div>
                       </div>
-                      <div className="border-t border-white/20 pt-2 mt-2">
+                    ) : (
+                      <div className="text-5xl font-bold text-white mb-2">
+                        ₹{selectedPlan === 'monthly' ? monthlyPrice : yearlyPrice}
+                      </div>
+                    )}
+                    <p className="text-gray-400">
+                      {selectedPlan === 'monthly' ? 'per month' : 'per year'}
+                    </p>
+                    {selectedPlan === 'yearly' && !discountApplied && (
+                      <p className="text-emerald-400 text-sm mt-2">
+                        Save ₹{yearlySavings} compared to monthly
+                      </p>
+                    )}
+                    {discountApplied && (
+                      <div className="mt-3 inline-flex items-center space-x-2 bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 px-3 py-1.5 rounded-lg text-sm font-medium">
+                        <Tag size={14} />
+                        <span>10% discount applied</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="mb-6">
+                    <label className="block text-gray-400 text-sm font-medium mb-2">
+                      Discount code
+                    </label>
+                    <div className="flex space-x-2">
+                      <input
+                        type="text"
+                        value={discountCode}
+                        onChange={(e) => {
+                          setDiscountCode(e.target.value);
+                          setDiscountError('');
+                          setDiscountApplied(false);
+                        }}
+                        placeholder="HAPPY10"
+                        className="flex-1 px-4 py-2.5 rounded-lg bg-white/5 text-white placeholder-gray-500 border border-white/10 focus:border-emerald-500/50 focus:outline-none transition-all duration-300"
+                        disabled={discountApplied}
+                      />
+                      {discountApplied ? (
+                        <div className="flex items-center space-x-2 px-4 py-2.5 bg-emerald-500/20 border border-emerald-500/50 rounded-lg">
+                          <CheckCircle size={18} className="text-emerald-400" />
+                        </div>
+                      ) : (
+                        <button
+                          onClick={applyDiscount}
+                          disabled={!discountCode.trim()}
+                          className="px-5 py-2.5 bg-white/10 hover:bg-white/20 disabled:bg-white/5 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-all duration-300 border border-white/20 hover:border-white/30 disabled:border-white/10 disabled:text-gray-600"
+                        >
+                          Apply
+                        </button>
+                      )}
+                    </div>
+                    {discountError && (
+                      <p className="text-red-400 text-xs mt-2">{discountError}</p>
+                    )}
+                    {discountApplied && (
+                      <p className="text-emerald-400 text-xs mt-2 flex items-center space-x-1">
+                        <CheckCircle size={12} />
+                        <span>You save ₹{discountAmount}</span>
+                      </p>
+                    )}
+                  </div>
+
+                  {discountApplied && (
+                    <div className="bg-white/5 rounded-lg p-4 mb-6 border border-white/10">
+                      <div className="flex items-center justify-between mb-2 text-sm">
+                        <span className="text-gray-400">Subtotal</span>
+                        <span className="text-white">₹{selectedPlan === 'monthly' ? monthlyPrice : yearlyPrice}</span>
+                      </div>
+                      <div className="flex items-center justify-between mb-2 text-sm">
+                        <span className="text-emerald-400">Discount (10%)</span>
+                        <span className="text-emerald-400">-₹{discountAmount}</span>
+                      </div>
+                      <div className="border-t border-white/10 pt-2 mt-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-white font-semibold">Total:</span>
+                          <span className="text-white font-semibold">Total</span>
                           <span className="text-2xl font-bold text-white">₹{finalPrice}</span>
                         </div>
                       </div>
-                    </>
+                    </div>
                   )}
-                </div>
 
-                <div className="mb-4">
-                  <label className="block text-emerald-100 text-sm font-medium mb-2">
-                    Have a discount code?
-                  </label>
-                  <div className="flex space-x-2">
-                    <input
-                      type="text"
-                      value={discountCode}
-                      onChange={(e) => {
-                        setDiscountCode(e.target.value);
-                        setDiscountError('');
-                        setDiscountApplied(false);
-                      }}
-                      placeholder="Enter code (e.g., HAPPY10)"
-                      className="flex-1 px-4 py-2.5 rounded-lg bg-white/10 backdrop-blur-sm text-white placeholder-white/50 border border-white/20 focus:border-emerald-300 focus:outline-none transition-all duration-300"
-                      disabled={discountApplied}
-                    />
-                    {discountApplied ? (
-                      <div className="flex items-center space-x-2 px-4 py-2.5 bg-emerald-500/30 border border-emerald-400 rounded-lg">
-                        <CheckCircle size={20} className="text-emerald-300" />
-                        <span className="text-emerald-100 font-medium text-sm">Applied</span>
-                      </div>
+                  <button
+                    onClick={handlePremiumPurchase}
+                    disabled={loading}
+                    className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 disabled:from-gray-600 disabled:to-gray-700 text-white py-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center space-x-2 shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40 disabled:shadow-none"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader className="animate-spin" size={20} />
+                        <span>Processing...</span>
+                      </>
                     ) : (
-                      <button
-                        onClick={applyDiscount}
-                        disabled={!discountCode.trim()}
-                        className="px-6 py-2.5 bg-white/20 hover:bg-white/30 disabled:bg-white/10 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-all duration-300 border border-white/30 hover:border-white/50 disabled:border-white/10"
-                      >
-                        Apply
-                      </button>
+                      <span>Continue to Payment</span>
                     )}
+                  </button>
+
+                  <div className="mt-4 space-y-2">
+                    <div className="flex items-center justify-center space-x-2 text-gray-400 text-xs">
+                      <Lock size={12} />
+                      <span>Secure payment with Razorpay</span>
+                    </div>
+                    <div className="text-center text-gray-500 text-xs">
+                      UPI • Cards • Net Banking • Wallets
+                    </div>
                   </div>
-                  {discountError && (
-                    <p className="text-red-300 text-xs mt-2">{discountError}</p>
-                  )}
-                  {discountApplied && (
-                    <p className="text-emerald-300 text-xs mt-2 flex items-center space-x-1">
-                      <CheckCircle size={14} />
-                      <span>Discount code applied successfully! You save ₹{discountAmount}</span>
-                    </p>
-                  )}
                 </div>
               </div>
-
-              <div className="grid grid-cols-2 gap-4 mb-8">
-                {[
-                  { icon: Video, text: 'Unlimited Debates' },
-                  { icon: Brain, text: 'AI Feedback' },
-                  { icon: Trophy, text: 'Achievements' },
-                  { icon: BarChart, text: 'Analytics' },
-                  { icon: Users, text: 'Networking' },
-                  { icon: BookOpen, text: 'Learning Paths' }
-                ].map((feature, idx) => (
-                  <div key={idx} className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
-                    <feature.icon className="mx-auto mb-2 text-yellow-300" size={28} />
-                    <span className="text-white text-sm font-medium">{feature.text}</span>
-                  </div>
-                ))}
-              </div>
-
-              <button
-                onClick={handlePremiumPurchase}
-                disabled={loading}
-                className="w-full bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 disabled:from-gray-400 disabled:to-gray-500 text-white py-5 rounded-2xl font-bold text-lg transition-all duration-300 flex items-center justify-center space-x-3 shadow-2xl transform hover:scale-105"
-              >
-                {loading ? (
-                  <>
-                    <Loader className="animate-spin" size={24} />
-                    <span>Processing...</span>
-                  </>
-                ) : (
-                  <>
-                    <Crown size={24} />
-                    <span>Start Your Journey</span>
-                    <Zap size={24} className="animate-pulse" />
-                  </>
-                )}
-              </button>
-
-              <p className="text-center text-emerald-100 text-sm mt-4">
-                🔒 Secure payment • Cancel anytime • 7-day money-back guarantee
-              </p>
-            </div>
-
-            <div className="bg-gray-800/30 backdrop-blur-sm rounded-2xl p-8 border-2 border-gray-700">
-              <div className="text-center mb-6">
-                <div className="inline-block bg-gradient-to-r from-purple-500 to-pink-500 text-white px-3 py-1 rounded-full text-xs font-bold mb-3">
-                  COMING SOON
-                </div>
-                <h3 className="text-2xl font-bold text-white mb-2">Pro</h3>
-                <div className="text-5xl font-black text-white mb-2">
-                  ₹2,499
-                </div>
-                <p className="text-gray-400">per month</p>
-              </div>
-              <ul className="space-y-4">
-                {[
-                  'Everything in Premium',
-                  '1-on-1 Expert Coaching',
-                  'Custom Learning Plans',
-                  'Priority Support',
-                  'Exclusive Masterclasses',
-                  'Career Opportunities',
-                  'Certificate Programs'
-                ].map((feature, idx) => (
-                  <li key={idx} className="flex items-start space-x-3">
-                    <Award className="text-purple-500 flex-shrink-0 mt-0.5" size={20} />
-                    <span className="text-gray-300">{feature}</span>
-                  </li>
-                ))}
-              </ul>
             </div>
           </div>
 
-          <div className="bg-gradient-to-r from-emerald-500/20 to-teal-500/20 backdrop-blur-sm rounded-2xl p-8 border-2 border-emerald-500/30">
-            <h3 className="text-2xl font-bold text-white mb-6 text-center">What Premium Members Are Saying</h3>
-            <div className="grid md:grid-cols-3 gap-6">
-              {[
-                {
-                  name: 'Arjun Sharma',
-                  role: 'MBA Student',
-                  text: 'Got my dream job at McKinsey! The AI feedback helped me ace group discussions.',
-                  rating: 5
-                },
-                {
-                  name: 'Priya Patel',
-                  role: 'Lawyer',
-                  text: 'My courtroom confidence skyrocketed. Worth every rupee!',
-                  rating: 5
-                },
-                {
-                  name: 'Rahul Kumar',
-                  role: 'Entrepreneur',
-                  text: 'Closed 3 investor deals after improving my pitch with DebateHub Premium.',
-                  rating: 5
-                }
-              ].map((testimonial, idx) => (
-                <div key={idx} className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
-                  <div className="flex space-x-1 mb-3">
-                    {[...Array(testimonial.rating)].map((_, i) => (
-                      <Star key={i} size={16} className="text-yellow-400 fill-yellow-400" />
-                    ))}
-                  </div>
-                  <p className="text-gray-200 mb-4 italic">"{testimonial.text}"</p>
-                  <div>
-                    <div className="font-semibold text-white">{testimonial.name}</div>
-                    <div className="text-sm text-gray-400">{testimonial.role}</div>
-                  </div>
-                </div>
-              ))}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-8 text-sm text-gray-400">
+            <div className="flex items-center space-x-2">
+              <Shield size={16} className="text-emerald-400" />
+              <span>7-day money-back guarantee</span>
             </div>
-          </div>
-
-          <div className="text-center mt-10">
-            <p className="text-gray-400 text-sm">
-              💳 Supports UPI, Cards, PhonePe, Google Pay, Paytm, Net Banking & more
-            </p>
+            <div className="flex items-center space-x-2">
+              <Check size={16} className="text-emerald-400" />
+              <span>Cancel anytime</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Lock size={16} className="text-emerald-400" />
+              <span>Bank-grade security</span>
+            </div>
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }
