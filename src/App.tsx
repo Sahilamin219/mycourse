@@ -44,7 +44,7 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-[#001a1a] via-[#002222] to-[#001515]">
       <Navigation
         onStartDebate={handleStartDebate}
         onSignIn={() => setShowAuthModal(true)}
