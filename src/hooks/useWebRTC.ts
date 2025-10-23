@@ -23,15 +23,20 @@ export function useWebRTC() {
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [matchRequest, setMatchRequest] = useState<MatchRequest | null>(null);
+  const [socketInitialized, setSocketInitialized] = useState(false);
 
   const socketRef = useRef<Socket | null>(null);
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const partnerIdRef = useRef<string | null>(null);
   const pendingMatchRef = useRef<MatchRequest | null>(null);
 
-  useEffect(() => {
+  const initializeSocket = () => {
+    if (socketRef.current || socketInitialized) return;
+
+    setSocketInitialized(true);
     socketRef.current = io(SOCKET_URL, {
       transports: ['websocket', 'polling'],
+      autoConnect: true,
     });
 
     socketRef.current.on('connected', (data) => {
@@ -113,9 +118,15 @@ export function useWebRTC() {
       cleanup();
     });
 
+  };
+
+  useEffect(() => {
     return () => {
       cleanup();
-      socketRef.current?.disconnect();
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
     };
   }, []);
 
@@ -172,9 +183,12 @@ export function useWebRTC() {
   };
 
   const startSearch = (topic: string = 'general', email: string = 'Anonymous') => {
+    initializeSocket();
     setIsSearching(true);
     setError(null);
-    socketRef.current?.emit('find_match', { topic, email });
+    setTimeout(() => {
+      socketRef.current?.emit('find_match', { topic, email });
+    }, 100);
   };
 
   const acceptMatch = () => {
