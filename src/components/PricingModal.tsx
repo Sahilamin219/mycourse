@@ -178,8 +178,8 @@ export function PricingModal({ isOpen, onClose, onSuccess }: PricingModalProps) 
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 overflow-y-auto">
-      <div className="min-h-screen flex items-center justify-center p-4 py-8">
-      <div className="bg-[#001a1a] rounded-2xl shadow-2xl max-w-4xl w-full relative border border-emerald-500/20">
+      <div className="min-h-full flex items-center justify-center p-4 py-8">
+      <div className="bg-[#001a1a] rounded-2xl shadow-2xl max-w-4xl w-full relative border border-emerald-500/20 my-8">
         <button
           onClick={onClose}
           className="absolute top-6 right-6 text-gray-400 hover:text-white transition-colors z-10"
@@ -187,16 +187,16 @@ export function PricingModal({ isOpen, onClose, onSuccess }: PricingModalProps) 
           <X size={24} />
         </button>
 
-        <div className="p-8 md:p-12">
-          <div className="text-center mb-12">
+        <div className="p-6 md:p-10">
+          <div className="text-center mb-8">
             <div className="inline-flex items-center space-x-2 bg-emerald-500/10 border border-emerald-500/30 px-4 py-2 rounded-full mb-6">
               <Sparkles size={16} className="text-emerald-400" />
               <span className="text-emerald-300 text-sm font-medium">Premium Membership</span>
             </div>
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-3">
               Upgrade to Premium
             </h2>
-            <p className="text-xl text-gray-400">
+            <p className="text-lg text-gray-400">
               Unlock unlimited debates and AI-powered insights
             </p>
           </div>
@@ -207,7 +207,7 @@ export function PricingModal({ isOpen, onClose, onSuccess }: PricingModalProps) 
             </div>
           )}
 
-          <div className="flex justify-center mb-10">
+          <div className="flex justify-center mb-8">
             <div className="bg-white/5 backdrop-blur-sm p-1.5 rounded-xl inline-flex border border-white/10">
               <button
                 onClick={() => setSelectedPlan('monthly')}
@@ -237,7 +237,7 @@ export function PricingModal({ isOpen, onClose, onSuccess }: PricingModalProps) 
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-emerald-500/5 to-teal-500/5 backdrop-blur-sm rounded-2xl p-8 md:p-10 border border-emerald-500/20 mb-8">
+          <div className="bg-gradient-to-br from-emerald-500/5 to-teal-500/5 backdrop-blur-sm rounded-2xl p-6 md:p-8 border border-emerald-500/20 mb-6">
             <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-8">
               <div className="flex-1">
                 <h3 className="text-2xl font-semibold text-white mb-6">Premium Features</h3>
@@ -297,7 +297,7 @@ export function PricingModal({ isOpen, onClose, onSuccess }: PricingModalProps) 
                           setDiscountError('');
                           setDiscountApplied(false);
                         }}
-                        placeholder="Enter coupon code"
+                        placeholder="coupon"
                         className="flex-1 px-4 py-2.5 rounded-lg bg-white/5 text-white placeholder-gray-500 border border-white/10 focus:border-emerald-500/50 focus:outline-none transition-all duration-300"
                         disabled={discountApplied}
                       />
