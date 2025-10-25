@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 
-const SOCKET_URL = 'http://localhost:8001';
+const SOCKET_URL = 'https://mycourse-32jb.onrender.com/';
 
 const ICE_SERVERS = {
   iceServers: [
