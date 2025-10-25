@@ -298,7 +298,7 @@ export function PricingModal({ isOpen, onClose, onSuccess }: PricingModalProps) 
                           setDiscountApplied(false);
                         }}
                         placeholder="coupon"
-                        className="flex-1 px-4 py-2.5 rounded-lg bg-white/5 text-white placeholder-gray-500 border border-white/10 focus:border-emerald-500/50 focus:outline-none transition-all duration-300"
+                        className="flex-1 px-1 py-2.5 rounded-lg bg-white/5 text-white placeholder-gray-500 border border-white/10 focus:border-emerald-500/50 focus:outline-none transition-all duration-300"
                         disabled={discountApplied}
                       />
                       {discountApplied ? (
