@@ -31,3 +31,22 @@ export async function fetchStats(): Promise<Stats> {
   if (!response.ok) throw new Error('Failed to fetch stats');
   return response.json();
 }
+
+export async function generateDebateAnalysis(sessionId: string, accessToken: string) {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const response = await fetch(`${supabaseUrl}/functions/v1/analyze-debate`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ sessionId }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to generate analysis');
+  }
+
+  return response.json();
+}

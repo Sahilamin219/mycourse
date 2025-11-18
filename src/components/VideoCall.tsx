@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Video, VideoOff, Mic, MicOff, PhoneOff, MessageSquare, FileText, Save } from 'lucide-react';
+import { Video, VideoOff, Mic, MicOff, PhoneOff, MessageSquare, FileText } from 'lucide-react';
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 import { createClient } from '@supabase/supabase-js';
 
@@ -22,7 +22,7 @@ export function VideoCall({ localStream, remoteStream, onEndCall, topic, session
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
   const [showTranscript, setShowTranscript] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const [savedTranscriptCount, setSavedTranscriptCount] = useState(0);
 
   const { isListening, transcripts, startListening, stopListening } = useSpeechRecognition();
 
@@ -48,6 +48,36 @@ export function VideoCall({ localStream, remoteStream, onEndCall, topic, session
     };
   }, [remoteStream]);
 
+  useEffect(() => {
+    const saveNewTranscripts = async () => {
+      if (!sessionId || transcripts.length === 0) return;
+      if (transcripts.length <= savedTranscriptCount) return;
+
+      const newTranscripts = transcripts.slice(savedTranscriptCount);
+      const transcriptRecords = newTranscripts.map(t => ({
+        session_id: sessionId,
+        speaker: t.speaker,
+        text: t.text,
+        timestamp: t.timestamp.toISOString(),
+      }));
+
+      try {
+        const { error } = await supabase
+          .from('debate_transcripts')
+          .insert(transcriptRecords);
+
+        if (!error) {
+          setSavedTranscriptCount(transcripts.length);
+        }
+      } catch (error) {
+        console.error('Error auto-saving transcripts:', error);
+      }
+    };
+
+    const debounceTimer = setTimeout(saveNewTranscripts, 2000);
+    return () => clearTimeout(debounceTimer);
+  }, [transcripts, sessionId, savedTranscriptCount]);
+
   const toggleVideo = () => {
     if (localStream) {
       const videoTrack = localStream.getVideoTracks()[0];
@@ -68,32 +98,6 @@ export function VideoCall({ localStream, remoteStream, onEndCall, topic, session
     }
   };
 
-  const saveTranscripts = async () => {
-    if (!sessionId || transcripts.length === 0) return;
-
-    setIsSaving(true);
-    try {
-      const transcriptRecords = transcripts.map(t => ({
-        session_id: sessionId,
-        speaker: t.speaker,
-        text: t.text,
-        timestamp: t.timestamp.toISOString(),
-      }));
-
-      const { error } = await supabase
-        .from('debate_transcripts')
-        .insert(transcriptRecords);
-
-      if (error) throw error;
-
-      alert('Transcripts saved successfully!');
-    } catch (error) {
-      console.error('Error saving transcripts:', error);
-      alert('Failed to save transcripts');
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   return (
     <div className="fixed inset-0 bg-gray-900 z-50">
@@ -116,6 +120,9 @@ export function VideoCall({ localStream, remoteStream, onEndCall, topic, session
               <FileText size={16} />
               <span>{showTranscript ? 'Hide' : 'Show'} Transcript</span>
             </button>
+            {savedTranscriptCount > 0 && (
+              <span className="text-xs text-emerald-300">● Auto-saved</span>
+            )}
           </div>
         </div>
 
@@ -168,14 +175,9 @@ export function VideoCall({ localStream, remoteStream, onEndCall, topic, session
             <div className="w-96 bg-gray-800 rounded-xl p-4 overflow-hidden flex flex-col">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-white font-semibold">Live Transcript</h3>
-                <button
-                  onClick={saveTranscripts}
-                  disabled={isSaving || transcripts.length === 0}
-                  className="bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-3 py-1 rounded text-sm flex items-center space-x-1 transition-colors"
-                >
-                  <Save size={14} />
-                  <span>{isSaving ? 'Saving...' : 'Save'}</span>
-                </button>
+                <span className="text-xs text-emerald-400">
+                  {savedTranscriptCount > 0 ? `${savedTranscriptCount} saved` : 'Auto-saving...'}
+                </span>
               </div>
               <div className="flex-1 overflow-y-auto space-y-3">
                 {transcripts.length === 0 ? (

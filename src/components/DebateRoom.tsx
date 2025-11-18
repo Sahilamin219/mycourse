@@ -1,10 +1,18 @@
 import { useState, useEffect, useRef } from 'react';
 import { VideoCall } from './VideoCall';
 import { WordPuzzle } from './WordPuzzle';
+import { DebateAnalysisReport } from './DebateAnalysisReport';
 import { useWebRTC } from '../hooks/useWebRTC';
 import { useAuth } from '../contexts/AuthContext';
 import { useSubscription } from '../hooks/useSubscription';
+import { generateDebateAnalysis } from '../api';
 import { Video, Loader, AlertCircle, Lightbulb, UserCheck, UserX } from 'lucide-react';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
+);
 
 interface DebateRoomProps {
   selectedTopic?: string;
@@ -27,6 +35,9 @@ export function DebateRoom({ selectedTopic }: DebateRoomProps) {
   const [showDebate, setShowDebate] = useState(false);
   const [topic, setTopic] = useState(selectedTopic || '');
   const [currentTip, setCurrentTip] = useState(0);
+  const [showAnalysis, setShowAnalysis] = useState(false);
+  const [analysisData, setAnalysisData] = useState<any>(null);
+  const [isGeneratingAnalysis, setIsGeneratingAnalysis] = useState(false);
 
   const { user } = useAuth();
   const { trackDebateSession, endDebateSession } = useSubscription();
@@ -88,12 +99,66 @@ export function DebateRoom({ selectedTopic }: DebateRoomProps) {
     if (sessionIdRef.current && sessionStartRef.current) {
       const durationSeconds = Math.floor((Date.now() - sessionStartRef.current) / 1000);
       await endDebateSession(sessionIdRef.current, durationSeconds);
+
+      endCall();
+      setShowDebate(false);
+
+      if (durationSeconds > 30) {
+        setIsGeneratingAnalysis(true);
+        try {
+          const session = await supabase.auth.getSession();
+          if (session.data.session) {
+            const result = await generateDebateAnalysis(
+              sessionIdRef.current,
+              session.data.session.access_token
+            );
+            setAnalysisData(result.analysis);
+            setShowAnalysis(true);
+          }
+        } catch (error) {
+          console.error('Error generating analysis:', error);
+          alert('Failed to generate analysis. Please try again later.');
+        } finally {
+          setIsGeneratingAnalysis(false);
+        }
+      }
+
       sessionIdRef.current = null;
       sessionStartRef.current = null;
+    } else {
+      endCall();
+      setShowDebate(false);
     }
-    endCall();
-    setShowDebate(false);
   };
+
+  if (isGeneratingAnalysis) {
+    return (
+      <div className="fixed inset-0 bg-gradient-to-br from-gray-900 via-emerald-900 to-gray-900 z-50 flex items-center justify-center p-4">
+        <div className="text-center text-white">
+          <Loader className="animate-spin mx-auto mb-6 text-emerald-400" size={72} />
+          <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
+            Analyzing Your Debate
+          </h2>
+          <p className="text-gray-300 text-lg">
+            Our AI is reviewing your performance and generating insights...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (showAnalysis && analysisData) {
+    return (
+      <DebateAnalysisReport
+        analysis={analysisData}
+        topic={topic}
+        onClose={() => {
+          setShowAnalysis(false);
+          setAnalysisData(null);
+        }}
+      />
+    );
+  }
 
   if (showDebate && isConnected) {
     return (
@@ -102,6 +167,7 @@ export function DebateRoom({ selectedTopic }: DebateRoomProps) {
         remoteStream={remoteStream}
         onEndCall={handleEndCall}
         topic={topic}
+        sessionId={sessionIdRef.current || undefined}
       />
     );
   }
