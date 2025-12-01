@@ -11,14 +11,17 @@ import { Footer } from './components/Footer';
 import { AuthModal } from './components/AuthModal';
 import { PricingModal } from './components/PricingModal';
 import { UserDashboard } from './components/UserDashboard';
+import ImproveYourself from './components/ImproveYourself';
 import { useAuth } from './contexts/AuthContext';
 import { useSubscription } from './hooks/useSubscription';
+
+type View = 'home' | 'dashboard' | 'improve';
 
 function App() {
   const [showDebateRoom, setShowDebateRoom] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showPricingModal, setShowPricingModal] = useState(false);
-  const [showDashboard, setShowDashboard] = useState(false);
+  const [currentView, setCurrentView] = useState<View>('home');
   const { user } = useAuth();
   const { canMakeCall, refetch } = useSubscription();
 
@@ -46,19 +49,21 @@ function App() {
     setShowPricingModal(true);
   };
 
-  if (user && showDashboard) {
+  if (user && currentView !== 'home') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#001a1a] via-[#002222] to-[#001515]">
         <Navigation
           onStartDebate={handleStartDebate}
           onSignIn={() => setShowAuthModal(true)}
           onUpgrade={handleUpgrade}
-          onDashboard={() => setShowDashboard(true)}
+          onDashboard={() => setCurrentView('dashboard')}
+          onImprove={() => setCurrentView('improve')}
         />
-        <UserDashboard />
+        {currentView === 'dashboard' && <UserDashboard />}
+        {currentView === 'improve' && <ImproveYourself />}
         <button
-          onClick={() => setShowDashboard(false)}
-          className="fixed bottom-8 right-8 bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-6 py-3 rounded-full font-semibold shadow-lg hover:shadow-emerald-500/50 transition-all duration-300"
+          onClick={() => setCurrentView('home')}
+          className="fixed bottom-8 right-8 bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-6 py-3 rounded-full font-semibold shadow-lg hover:shadow-emerald-500/50 transition-all duration-300 z-50"
         >
           Back to Home
         </button>
@@ -81,7 +86,8 @@ function App() {
         onStartDebate={handleStartDebate}
         onSignIn={() => setShowAuthModal(true)}
         onUpgrade={handleUpgrade}
-        onDashboard={() => setShowDashboard(true)}
+        onDashboard={() => setCurrentView('dashboard')}
+        onImprove={() => setCurrentView('improve')}
       />
       <Hero onStartDebate={handleStartDebate} />
       <HowItWorks />

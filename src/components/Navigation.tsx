@@ -1,4 +1,4 @@
-import { Menu, X, Video, MessageSquare, LogOut, User, Crown, Sparkles, Search, LayoutDashboard } from 'lucide-react';
+import { Menu, X, Video, MessageSquare, LogOut, User, Crown, Sparkles, Search, LayoutDashboard, Trophy, Award, Gift, UserCircle, BookOpen } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSubscription } from '../hooks/useSubscription';
@@ -8,9 +8,10 @@ interface NavigationProps {
   onSignIn: () => void;
   onUpgrade: () => void;
   onDashboard?: () => void;
+  onImprove?: () => void;
 }
 
-export function Navigation({ onStartDebate, onSignIn, onUpgrade, onDashboard }: NavigationProps) {
+export function Navigation({ onStartDebate, onSignIn, onUpgrade, onDashboard, onImprove }: NavigationProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
   const { user, signOut } = useAuth();
@@ -109,6 +110,13 @@ export function Navigation({ onStartDebate, onSignIn, onUpgrade, onDashboard }: 
                       <span>Dashboard</span>
                     </button>
                     <button
+                      onClick={onImprove}
+                      className="w-full px-4 py-3 text-left text-gray-300 hover:text-white hover:bg-white/5 transition-all duration-300 flex items-center space-x-2">
+                      <BookOpen size={18} />
+                      <span>Improve Yourself</span>
+                    </button>
+                    <div className="border-t border-emerald-500/10"></div>
+                    <button
                       onClick={() => signOut()}
                       className="w-full px-4 py-3 text-left text-gray-300 hover:text-white hover:bg-white/5 transition-all duration-300 flex items-center space-x-2">
                       <LogOut size={18} />
@@ -201,6 +209,15 @@ export function Navigation({ onStartDebate, onSignIn, onUpgrade, onDashboard }: 
                     className="w-full bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white px-4 py-3 rounded-lg transition-all duration-300 mb-3 flex items-center justify-center space-x-2">
                     <LayoutDashboard size={18} />
                     <span>Dashboard</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      onImprove?.();
+                      setMobileMenuOpen(false);
+                    }}
+                    className="w-full bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white px-4 py-3 rounded-lg transition-all duration-300 mb-3 flex items-center justify-center space-x-2">
+                    <BookOpen size={18} />
+                    <span>Improve Yourself</span>
                   </button>
                   <button
                     onClick={() => {
