@@ -7,12 +7,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { useSubscription } from '../hooks/useSubscription';
 import { generateDebateAnalysis } from '../api';
 import { Video, Loader, AlertCircle, Lightbulb, UserCheck, UserX } from 'lucide-react';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
 
 interface DebateRoomProps {
   selectedTopic?: string;
@@ -39,7 +33,7 @@ export function DebateRoom({ selectedTopic }: DebateRoomProps) {
   const [analysisData, setAnalysisData] = useState<any>(null);
   const [isGeneratingAnalysis, setIsGeneratingAnalysis] = useState(false);
 
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const { trackDebateSession, endDebateSession } = useSubscription();
   const sessionIdRef = useRef<string | null>(null);
   const sessionStartRef = useRef<number | null>(null);
@@ -106,13 +100,12 @@ export function DebateRoom({ selectedTopic }: DebateRoomProps) {
       if (durationSeconds > 30) {
         setIsGeneratingAnalysis(true);
         try {
-          const session = await supabase.auth.getSession();
-          if (session.data.session) {
+          if (user && token) {
             const result = await generateDebateAnalysis(
               sessionIdRef.current,
-              session.data.session.access_token
+              token
             );
-            setAnalysisData(result.analysis);
+            setAnalysisData(result);
             setShowAnalysis(true);
           }
         } catch (error) {
@@ -255,9 +248,8 @@ export function DebateRoom({ selectedTopic }: DebateRoomProps) {
                 {DEBATE_TIPS.map((_, idx) => (
                   <div
                     key={idx}
-                    className={`h-1 rounded-full transition-all duration-300 ${
-                      idx === currentTip ? 'w-8 bg-emerald-500' : 'w-1 bg-gray-600'
-                    }`}
+                    className={`h-1 rounded-full transition-all duration-300 ${idx === currentTip ? 'w-8 bg-emerald-500' : 'w-1 bg-gray-600'
+                      }`}
                   />
                 ))}
               </div>

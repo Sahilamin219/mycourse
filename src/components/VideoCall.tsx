@@ -1,12 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Video, VideoOff, Mic, MicOff, PhoneOff, MessageSquare, FileText } from 'lucide-react';
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
+import { useAuth } from '../contexts/AuthContext';
 
 interface VideoCallProps {
   localStream: MediaStream | null;
@@ -23,6 +18,7 @@ export function VideoCall({ localStream, remoteStream, onEndCall, topic, session
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
   const [showTranscript, setShowTranscript] = useState(false);
   const [savedTranscriptCount, setSavedTranscriptCount] = useState(0);
+  const { token } = useAuth();
 
   const { isListening, transcripts, startListening, stopListening } = useSpeechRecognition();
 
@@ -50,7 +46,7 @@ export function VideoCall({ localStream, remoteStream, onEndCall, topic, session
 
   useEffect(() => {
     const saveNewTranscripts = async () => {
-      if (!sessionId || transcripts.length === 0) return;
+      if (!sessionId || transcripts.length === 0 || !token) return;
       if (transcripts.length <= savedTranscriptCount) return;
 
       const newTranscripts = transcripts.slice(savedTranscriptCount);
@@ -62,11 +58,16 @@ export function VideoCall({ localStream, remoteStream, onEndCall, topic, session
       }));
 
       try {
-        const { error } = await supabase
-          .from('debate_transcripts')
-          .insert(transcriptRecords);
+        const response = await fetch('http://localhost:8000/api/debate-transcripts', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(transcriptRecords)
+        });
 
-        if (!error) {
+        if (response.ok) {
           setSavedTranscriptCount(transcripts.length);
         }
       } catch (error) {
@@ -76,7 +77,7 @@ export function VideoCall({ localStream, remoteStream, onEndCall, topic, session
 
     const debounceTimer = setTimeout(saveNewTranscripts, 2000);
     return () => clearTimeout(debounceTimer);
-  }, [transcripts, sessionId, savedTranscriptCount]);
+  }, [transcripts, sessionId, savedTranscriptCount, token]);
 
   const toggleVideo = () => {
     if (localStream) {
@@ -188,9 +189,8 @@ export function VideoCall({ localStream, remoteStream, onEndCall, topic, session
                   transcripts.map((t, idx) => (
                     <div
                       key={idx}
-                      className={`p-3 rounded-lg ${
-                        t.speaker === 'user' ? 'bg-emerald-900/50' : 'bg-gray-700'
-                      }`}
+                      className={`p-3 rounded-lg ${t.speaker === 'user' ? 'bg-emerald-900/50' : 'bg-gray-700'
+                        }`}
                     >
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs font-semibold text-emerald-400">
@@ -213,22 +213,20 @@ export function VideoCall({ localStream, remoteStream, onEndCall, topic, session
           <div className="max-w-md mx-auto flex items-center justify-center space-x-4">
             <button
               onClick={toggleVideo}
-              className={`p-4 rounded-full transition-all duration-300 ${
-                isVideoEnabled
+              className={`p-4 rounded-full transition-all duration-300 ${isVideoEnabled
                   ? 'bg-gray-700 hover:bg-gray-600 text-white'
                   : 'bg-red-500 hover:bg-red-600 text-white'
-              }`}
+                }`}
             >
               {isVideoEnabled ? <Video size={24} /> : <VideoOff size={24} />}
             </button>
 
             <button
               onClick={toggleAudio}
-              className={`p-4 rounded-full transition-all duration-300 ${
-                isAudioEnabled
+              className={`p-4 rounded-full transition-all duration-300 ${isAudioEnabled
                   ? 'bg-gray-700 hover:bg-gray-600 text-white'
                   : 'bg-red-500 hover:bg-red-600 text-white'
-              }`}
+                }`}
             >
               {isAudioEnabled ? <Mic size={24} /> : <MicOff size={24} />}
             </button>

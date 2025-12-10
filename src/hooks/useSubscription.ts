@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../contexts/AuthContext';
 import { useAuth } from '../contexts/AuthContext';
 
 export interface Subscription {
@@ -13,43 +12,35 @@ export interface Subscription {
 }
 
 export function useSubscription() {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
   const [dailyCallCount, setDailyCallCount] = useState(0);
 
   const fetchSubscription = async () => {
-    if (!user) {
+    if (!user || !token) {
       setLoading(false);
       return;
     }
 
     try {
-      const { data, error } = await supabase
-        .from('subscriptions')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('status', 'active')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      const response = await fetch(`http://localhost:8000/api/subscriptions?user_id=${user.id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
 
-      if (error) throw error;
-
-      if (data) {
+      if (response.ok) {
+        const data = await response.json();
         setSubscription(data);
+      } else {
+        setSubscription(null);
       }
 
-      const today = new Date().toISOString().split('T')[0];
-      const { data: sessions, error: sessionError } = await supabase
-        .from('debate_sessions_tracking')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('session_date', today);
+      // Fetch daily call count (mocked for now as backend endpoint for this specific stat might need adjustment)
+      // We can add an endpoint for this or include it in user stats
+      setDailyCallCount(0);
 
-      if (sessionError) throw sessionError;
-
-      setDailyCallCount(sessions?.length || 0);
     } catch (error) {
       console.error('Error fetching subscription:', error);
     } finally {
@@ -59,7 +50,7 @@ export function useSubscription() {
 
   useEffect(() => {
     fetchSubscription();
-  }, [user]);
+  }, [user, token]);
 
   const isPremium = () => {
     if (!subscription) return false;
@@ -77,22 +68,25 @@ export function useSubscription() {
   };
 
   const trackDebateSession = async (topic: string, partnerId?: string) => {
-    if (!user) return null;
+    if (!user || !token) return null;
 
     try {
-      const { data, error } = await supabase
-        .from('debate_sessions_tracking')
-        .insert({
+      const response = await fetch('http://localhost:8000/api/subscriptions/track-session', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
           user_id: user.id,
-          partner_id: partnerId || null,
-          topic: topic,
-          session_date: new Date().toISOString().split('T')[0],
+          partner_id: partnerId,
+          topic: topic
         })
-        .select()
-        .single();
+      });
 
-      if (error) throw error;
+      if (!response.ok) throw new Error('Failed to track session');
 
+      const data = await response.json();
       setDailyCallCount(prev => prev + 1);
       return data;
     } catch (error) {
@@ -102,18 +96,20 @@ export function useSubscription() {
   };
 
   const endDebateSession = async (sessionId: string, durationSeconds: number) => {
-    if (!user) return;
+    if (!user || !token) return;
 
     try {
-      const { error } = await supabase
-        .from('debate_sessions_tracking')
-        .update({
+      await fetch(`http://localhost:8000/api/debate-sessions/${sessionId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
           duration_seconds: durationSeconds,
           ended_at: new Date().toISOString(),
         })
-        .eq('id', sessionId);
-
-      if (error) throw error;
+      });
     } catch (error) {
       console.error('Error ending session:', error);
     }
