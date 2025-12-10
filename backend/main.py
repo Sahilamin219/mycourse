@@ -3,8 +3,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
 import os
+from pathlib import Path
+from dotenv import load_dotenv
 from supabase import create_client, Client
 from ai_analysis import generate_ai_analysis
+
+env_path = Path(__file__).parent.parent / ".env"
+load_dotenv(dotenv_path=env_path)
 
 app = FastAPI(title="DebateHub API", version="1.0.0")
 
@@ -18,6 +23,12 @@ app.add_middleware(
 
 supabase_url = os.getenv("VITE_SUPABASE_URL")
 supabase_key = os.getenv("VITE_SUPABASE_ANON_KEY")
+
+if not supabase_url:
+    raise ValueError(f"VITE_SUPABASE_URL not found. Checked .env at: {env_path.absolute()}")
+if not supabase_key:
+    raise ValueError(f"VITE_SUPABASE_ANON_KEY not found. Checked .env at: {env_path.absolute()}")
+
 supabase: Client = create_client(supabase_url, supabase_key)
 
 
