@@ -1,7 +1,7 @@
 import type { DebateTopic, Resource, Testimonial, Stats } from './types';
 import { createClient } from '@supabase/supabase-js';
 
-const API_URL = 'http://localhost:8000/api';
+const API_URL = 'http://localhost:8001/api';
 
 export const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
