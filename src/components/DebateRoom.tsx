@@ -7,12 +7,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { useSubscription } from '../hooks/useSubscription';
 import { generateDebateAnalysis } from '../api';
 import { Video, Loader, AlertCircle, Lightbulb, UserCheck, UserX } from 'lucide-react';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
 
 interface DebateRoomProps {
   selectedTopic?: string;

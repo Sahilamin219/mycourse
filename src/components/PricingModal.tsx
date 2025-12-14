@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { X, Check, Shield, Loader, Lock, Tag, CheckCircle, Sparkles } from 'lucide-react';
-import { useAuth, supabase } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
 
 interface PricingModalProps {
   isOpen: boolean;

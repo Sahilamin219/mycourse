@@ -1,79 +1,105 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { createClient, User } from '@supabase/supabase-js';
+import * as api from '../api';
 
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
+interface User {
+  id: string;
+  email: string;
+  full_name: string | null;
+  subscription_tier: string;
+  subscription_status: string;
+  points: number;
+  level: number;
+  badges: string[];
+  streak_days: number;
+  debates_completed: number;
+  created_at: string;
+}
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  accessToken: string | null;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, fullName?: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const TOKEN_KEY = 'auth_token';
+const USER_KEY = 'auth_user';
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-    });
+    const storedToken = localStorage.getItem(TOKEN_KEY);
+    const storedUser = localStorage.getItem(USER_KEY);
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      (async () => {
-        setUser(session?.user ?? null);
-      })();
-    });
+    if (storedToken && storedUser) {
+      try {
+        setAccessToken(storedToken);
+        setUser(JSON.parse(storedUser));
+        api.getCurrentUser(storedToken).then((user) => {
+          setUser(user);
+          localStorage.setItem(USER_KEY, JSON.stringify(user));
+        }).catch(() => {
+          localStorage.removeItem(TOKEN_KEY);
+          localStorage.removeItem(USER_KEY);
+          setAccessToken(null);
+          setUser(null);
+        });
+      } catch {
+        localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem(USER_KEY);
+      }
+    }
 
-    return () => subscription.unsubscribe();
+    setLoading(false);
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) throw error;
+    setLoading(true);
+    try {
+      const response = await api.signIn(email, password);
+      setAccessToken(response.access_token);
+      setUser(response.user);
+      localStorage.setItem(TOKEN_KEY, response.access_token);
+      localStorage.setItem(USER_KEY, JSON.stringify(response.user));
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const signUp = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: window.location.origin,
-      },
-    });
-
-    if (error) throw error;
+  const signUp = async (email: string, password: string, fullName?: string) => {
+    setLoading(true);
+    try {
+      const response = await api.signUp(email, password, fullName);
+      setAccessToken(response.access_token);
+      setUser(response.user);
+      localStorage.setItem(TOKEN_KEY, response.access_token);
+      localStorage.setItem(USER_KEY, JSON.stringify(response.user));
+    } finally {
+      setLoading(false);
+    }
   };
 
   const signInWithGoogle = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: window.location.origin,
-      },
-    });
-
-    if (error) throw error;
+    throw new Error('Google sign-in is not implemented');
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    setAccessToken(null);
+    setUser(null);
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signInWithGoogle, signOut }}>
+    <AuthContext.Provider value={{ user, loading, accessToken, signIn, signUp, signInWithGoogle, signOut }}>
       {children}
     </AuthContext.Provider>
   );
@@ -86,5 +112,3 @@ export function useAuth() {
   }
   return context;
 }
-
-export { supabase };

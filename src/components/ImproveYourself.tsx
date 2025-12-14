@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { BookOpen, Award, Filter, Star, Clock, DollarSign, Bookmark, Check, ExternalLink, Search } from 'lucide-react';
-import { supabase } from '../api';
+import { useAuth } from '../contexts/AuthContext';
 
 interface LearningResource {
   id: string;

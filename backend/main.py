@@ -1,15 +1,15 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from typing import List, Optional
-import os
-from pathlib import Path
-from dotenv import load_dotenv
-from supabase import create_client, Client
+from datetime import datetime
+from sqlalchemy.orm import Session
+from database import get_db, engine, Base
+from models import User, DebateSession, DebateTranscript, Payment, Notification, Resource
+from auth import get_password_hash, verify_password, create_access_token, get_current_user
 from ai_analysis import generate_ai_analysis
 
-env_path = Path(__file__).parent.parent / ".env"
-load_dotenv(dotenv_path=env_path)
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="DebateHub API", version="1.0.0")
 
@@ -21,241 +21,298 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-supabase_url = os.getenv("VITE_SUPABASE_URL")
-supabase_key = os.getenv("VITE_SUPABASE_ANON_KEY")
+class SignUpRequest(BaseModel):
+    email: EmailStr
+    password: str
+    full_name: Optional[str] = None
 
-if not supabase_url:
-    raise ValueError(f"VITE_SUPABASE_URL not found. Checked .env at: {env_path.absolute()}")
-if not supabase_key:
-    raise ValueError(f"VITE_SUPABASE_ANON_KEY not found. Checked .env at: {env_path.absolute()}")
+class SignInRequest(BaseModel):
+    email: EmailStr
+    password: str
 
-supabase: Client = create_client(supabase_url, supabase_key)
+class DebateSessionCreate(BaseModel):
+    topic: str
+    stance: str
 
+class TranscriptCreate(BaseModel):
+    session_id: str
+    speaker: str
+    text: str
 
-class Category(BaseModel):
-    id: str
-    name: str
-    description: str
-    icon: str
-    course_count: int
-    gradient: str
-
-
-class Instructor(BaseModel):
-    id: str
-    name: str
-    title: str
-    bio: Optional[str] = None
-    avatar_url: Optional[str] = None
-
-
-class Course(BaseModel):
-    id: str
-    title: str
-    description: str
-    instructor_id: str
-    instructor_name: Optional[str] = None
-    category_id: str
-    category_name: Optional[str] = None
-    price: float
-    original_price: float
-    rating: float
-    student_count: int
-    duration: str
-    image_url: str
-    badge: Optional[str] = None
-    badge_color: Optional[str] = None
-    updated_date: Optional[str] = None
-    is_featured: Optional[bool] = False
-
-
-class Testimonial(BaseModel):
-    id: str
-    student_name: str
-    student_title: str
-    student_avatar: str
-    rating: int
-    comment: str
-
+class AnalyzeDebateRequest(BaseModel):
+    session_id: str
+    transcripts: List[dict]
 
 @app.get("/")
 async def root():
-    return {"message": "Welcome to DebateHub API"}
+    return {"message": "Welcome to DebateHub API - PostgreSQL Edition"}
 
+@app.post("/auth/signup")
+async def sign_up(request: SignUpRequest, db: Session = Depends(get_db)):
+    existing_user = db.query(User).filter(User.email == request.email).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
 
-@app.get("/api/categories", response_model=List[Category])
-async def get_categories():
-    try:
-        response = supabase.table("categories").select("*").execute()
-        return response.data
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    hashed_password = get_password_hash(request.password)
+    new_user = User(
+        email=request.email,
+        password_hash=hashed_password,
+        full_name=request.full_name,
+        subscription_tier="free",
+        subscription_status="active"
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
 
+    access_token = create_access_token(data={"sub": new_user.id})
 
-@app.get("/api/courses", response_model=List[Course])
-async def get_courses():
-    try:
-        response = supabase.table("courses").select("""
-            *,
-            instructors (name),
-            categories (name)
-        """).execute()
-
-        courses = []
-        for course in response.data:
-            course_data = {
-                **course,
-                "instructor_name": course.get("instructors", {}).get("name"),
-                "category_name": course.get("categories", {}).get("name")
-            }
-            courses.append(course_data)
-
-        return courses
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.get("/api/courses/{course_id}", response_model=Course)
-async def get_course(course_id: str):
-    try:
-        response = supabase.table("courses").select("""
-            *,
-            instructors (name),
-            categories (name)
-        """).eq("id", course_id).execute()
-
-        if not response.data:
-            raise HTTPException(status_code=404, detail="Course not found")
-
-        course = response.data[0]
-        course_data = {
-            **course,
-            "instructor_name": course.get("instructors", {}).get("name"),
-            "category_name": course.get("categories", {}).get("name")
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "id": new_user.id,
+            "email": new_user.email,
+            "full_name": new_user.full_name,
+            "subscription_tier": new_user.subscription_tier,
+            "subscription_status": new_user.subscription_status,
+            "points": new_user.points,
+            "level": new_user.level,
+            "badges": new_user.badges,
+            "streak_days": new_user.streak_days,
+            "debates_completed": new_user.debates_completed,
+            "created_at": new_user.created_at
         }
+    }
 
-        return course_data
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+@app.post("/auth/signin")
+async def sign_in(request: SignInRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == request.email).first()
+    if not user or not verify_password(request.password, user.password_hash):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
 
+    access_token = create_access_token(data={"sub": user.id})
 
-@app.get("/api/instructors", response_model=List[Instructor])
-async def get_instructors():
-    try:
-        response = supabase.table("instructors").select("*").execute()
-        return response.data
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.get("/api/testimonials", response_model=List[Testimonial])
-async def get_testimonials():
-    try:
-        response = supabase.table("testimonials").select("*").execute()
-        return response.data
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.get("/api/stats")
-async def get_stats():
-    try:
-        courses_response = supabase.table("courses").select("id", count="exact").execute()
-        instructors_response = supabase.table("instructors").select("id", count="exact").execute()
-
-        courses_count = courses_response.count or 0
-        instructors_count = instructors_response.count or 0
-
-        students_response = supabase.table("courses").select("student_count").execute()
-        total_students = sum(course.get("student_count", 0) for course in students_response.data)
-
-        return {
-            "courses_available": courses_count,
-            "happy_students": total_students,
-            "expert_instructors": instructors_count,
-            "support_available": "24/7"
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "full_name": user.full_name,
+            "subscription_tier": user.subscription_tier,
+            "subscription_status": user.subscription_status,
+            "points": user.points,
+            "level": user.level,
+            "badges": user.badges,
+            "streak_days": user.streak_days,
+            "debates_completed": user.debates_completed,
+            "created_at": user.created_at
         }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    }
 
+@app.get("/auth/me")
+async def get_me(current_user: User = Depends(get_current_user)):
+    return {
+        "id": current_user.id,
+        "email": current_user.email,
+        "full_name": current_user.full_name,
+        "subscription_tier": current_user.subscription_tier,
+        "subscription_status": current_user.subscription_status,
+        "points": current_user.points,
+        "level": current_user.level,
+        "badges": current_user.badges,
+        "streak_days": current_user.streak_days,
+        "debates_completed": current_user.debates_completed,
+        "created_at": current_user.created_at
+    }
 
-@app.post("/api/debate-sessions")
-async def create_debate_session(data: dict):
-    try:
-        response = supabase.table("debate_sessions").insert({
-            "user_id": data.get("user_id"),
-            "partner_id": data.get("partner_id"),
-            "topic": data.get("topic"),
-        }).execute()
-        return response.data[0]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+@app.post("/debates/sessions")
+async def create_debate_session(
+    request: DebateSessionCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    session = DebateSession(
+        user_id=current_user.id,
+        topic=request.topic,
+        stance=request.stance,
+        status="active"
+    )
+    db.add(session)
+    db.commit()
+    db.refresh(session)
+    return session
 
+@app.get("/debates/sessions")
+async def get_debate_sessions(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    sessions = db.query(DebateSession).filter(
+        DebateSession.user_id == current_user.id
+    ).order_by(DebateSession.created_at.desc()).all()
+    return sessions
 
-@app.put("/api/debate-sessions/{session_id}")
-async def end_debate_session(session_id: str, data: dict):
-    try:
-        response = supabase.table("debate_sessions").update({
-            "ended_at": data.get("ended_at"),
-            "duration_seconds": data.get("duration_seconds"),
-        }).eq("id", session_id).execute()
-        return response.data[0]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+@app.get("/debates/sessions/{session_id}")
+async def get_debate_session(
+    session_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    session = db.query(DebateSession).filter(
+        DebateSession.id == session_id,
+        DebateSession.user_id == current_user.id
+    ).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return session
 
+@app.post("/debates/transcripts")
+async def create_transcript(
+    request: TranscriptCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    session = db.query(DebateSession).filter(
+        DebateSession.id == request.session_id,
+        DebateSession.user_id == current_user.id
+    ).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
 
-@app.post("/api/debate-analysis/{session_id}")
-async def create_debate_analysis(session_id: str, user_id: str):
-    try:
-        transcripts_response = supabase.table("debate_transcripts")\
-            .select("*")\
-            .eq("session_id", session_id)\
-            .execute()
+    transcript = DebateTranscript(
+        session_id=request.session_id,
+        speaker=request.speaker,
+        text=request.text
+    )
+    db.add(transcript)
+    db.commit()
+    db.refresh(transcript)
+    return {"id": transcript.id, "message": "Transcript created successfully"}
 
-        transcripts = transcripts_response.data
+@app.get("/debates/sessions/{session_id}/transcripts")
+async def get_transcripts(
+    session_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    session = db.query(DebateSession).filter(
+        DebateSession.id == session_id,
+        DebateSession.user_id == current_user.id
+    ).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
 
-        analysis = await generate_ai_analysis(session_id, user_id, transcripts)
+    transcripts = db.query(DebateTranscript).filter(
+        DebateTranscript.session_id == session_id
+    ).order_by(DebateTranscript.timestamp).all()
 
-        response = supabase.table("debate_analysis").insert(analysis).execute()
+    return [
+        {
+            "id": t.id,
+            "speaker": t.speaker,
+            "text": t.text,
+            "timestamp": t.timestamp
+        }
+        for t in transcripts
+    ]
 
-        return response.data[0]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+@app.post("/debates/analyze")
+async def analyze_debate(
+    request: AnalyzeDebateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    session = db.query(DebateSession).filter(
+        DebateSession.id == request.session_id,
+        DebateSession.user_id == current_user.id
+    ).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
 
+    analysis = await generate_ai_analysis(request.transcripts, session.topic, session.stance)
 
-@app.get("/api/debate-history/{user_id}")
-async def get_debate_history(user_id: str):
-    try:
-        response = supabase.table("debate_sessions")\
-            .select("*")\
-            .eq("user_id", user_id)\
-            .order("created_at", desc=True)\
-            .limit(20)\
-            .execute()
-        return response.data
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    session.overall_score = analysis.get("overall_score")
+    session.clarity_score = analysis.get("clarity_score")
+    session.logic_score = analysis.get("logic_score")
+    session.evidence_score = analysis.get("evidence_score")
+    session.rebuttal_score = analysis.get("rebuttal_score")
+    session.persuasiveness_score = analysis.get("persuasiveness_score")
+    session.strengths = analysis.get("strengths", [])
+    session.weaknesses = analysis.get("weaknesses", [])
+    session.recommendations = analysis.get("recommendations", [])
+    session.weak_portions = analysis.get("weak_portions", [])
+    session.status = "completed"
+    session.completed_at = datetime.utcnow()
 
+    current_user.debates_completed += 1
+    current_user.points += int(analysis.get("overall_score", 0) * 10)
 
-@app.get("/api/debate-analysis/session/{session_id}")
-async def get_session_analysis(session_id: str):
-    try:
-        response = supabase.table("debate_analysis")\
-            .select("*")\
-            .eq("session_id", session_id)\
-            .execute()
+    db.commit()
 
-        if not response.data:
-            raise HTTPException(status_code=404, detail="Analysis not found")
+    return {"analysis": analysis, "message": "Debate analyzed successfully"}
 
-        return response.data[0]
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+@app.get("/resources")
+async def get_resources(db: Session = Depends(get_db)):
+    resources = db.query(Resource).all()
+    return [
+        {
+            "id": r.id,
+            "title": r.title,
+            "description": r.description,
+            "content": r.content,
+            "category": r.category,
+            "difficulty": r.difficulty,
+            "estimated_time": r.estimated_time,
+            "icon": r.icon,
+            "gradient": r.gradient,
+            "created_at": r.created_at
+        }
+        for r in resources
+    ]
 
+@app.get("/notifications")
+async def get_notifications(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    notifications = db.query(Notification).filter(
+        Notification.user_id == current_user.id
+    ).order_by(Notification.created_at.desc()).all()
+
+    return [
+        {
+            "id": n.id,
+            "type": n.type,
+            "title": n.title,
+            "message": n.message,
+            "read": n.read,
+            "created_at": n.created_at
+        }
+        for n in notifications
+    ]
+
+@app.put("/notifications/{notification_id}/read")
+async def mark_notification_read(
+    notification_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    notification = db.query(Notification).filter(
+        Notification.id == notification_id,
+        Notification.user_id == current_user.id
+    ).first()
+    if not notification:
+        raise HTTPException(status_code=404, detail="Notification not found")
+
+    notification.read = True
+    db.commit()
+    return {"message": "Notification marked as read"}
+
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy", "database": "PostgreSQL"}
 
 if __name__ == "__main__":
     import uvicorn

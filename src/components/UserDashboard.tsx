@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useAuth, supabase } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
 import { Video, TrendingUp, BookOpen, Award, Clock, BarChart, Calendar, Target, Brain, MessageCircle } from 'lucide-react';
 
 interface DebateSession {

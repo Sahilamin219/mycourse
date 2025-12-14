@@ -1,11 +1,7 @@
 import { useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
 import { Clock, Calendar, TrendingUp, Award, AlertCircle } from 'lucide-react';
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
+import { useAuth } from '../contexts/AuthContext';
+import * as api from '../api';
 
 interface DebateSession {
   id: string;

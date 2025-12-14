@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../contexts/AuthContext';
 import { useAuth } from '../contexts/AuthContext';
 
 export interface Subscription {
@@ -15,60 +14,26 @@ export interface Subscription {
 export function useSubscription() {
   const { user } = useAuth();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [dailyCallCount, setDailyCallCount] = useState(0);
 
-  const fetchSubscription = async () => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from('subscriptions')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('status', 'active')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (error) throw error;
-
-      if (data) {
-        setSubscription(data);
-      }
-
-      const today = new Date().toISOString().split('T')[0];
-      const { data: sessions, error: sessionError } = await supabase
-        .from('debate_sessions_tracking')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('session_date', today);
-
-      if (sessionError) throw sessionError;
-
-      setDailyCallCount(sessions?.length || 0);
-    } catch (error) {
-      console.error('Error fetching subscription:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchSubscription();
+    if (user) {
+      setSubscription({
+        id: user.id,
+        user_id: user.id,
+        plan_type: user.subscription_tier === 'premium' ? 'premium' : 'free',
+        status: user.subscription_status === 'active' ? 'active' : 'expired',
+        start_date: user.created_at,
+        end_date: null,
+        auto_renew: false,
+      });
+    }
   }, [user]);
 
   const isPremium = () => {
-    if (!subscription) return false;
-    if (subscription.plan_type !== 'premium') return false;
-    if (subscription.status !== 'active') return false;
-    if (subscription.end_date && new Date(subscription.end_date) < new Date()) {
-      return false;
-    }
-    return true;
+    if (!user) return false;
+    return user.subscription_tier === 'premium' && user.subscription_status === 'active';
   };
 
   const canMakeCall = () => {
@@ -79,44 +44,12 @@ export function useSubscription() {
   const trackDebateSession = async (topic: string, partnerId?: string) => {
     if (!user) return null;
 
-    try {
-      const { data, error } = await supabase
-        .from('debate_sessions_tracking')
-        .insert({
-          user_id: user.id,
-          partner_id: partnerId || null,
-          topic: topic,
-          session_date: new Date().toISOString().split('T')[0],
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      setDailyCallCount(prev => prev + 1);
-      return data;
-    } catch (error) {
-      console.error('Error tracking session:', error);
-      return null;
-    }
+    setDailyCallCount(prev => prev + 1);
+    return { id: Date.now().toString(), topic, partnerId };
   };
 
   const endDebateSession = async (sessionId: string, durationSeconds: number) => {
-    if (!user) return;
-
-    try {
-      const { error } = await supabase
-        .from('debate_sessions_tracking')
-        .update({
-          duration_seconds: durationSeconds,
-          ended_at: new Date().toISOString(),
-        })
-        .eq('id', sessionId);
-
-      if (error) throw error;
-    } catch (error) {
-      console.error('Error ending session:', error);
-    }
+    return;
   };
 
   return {
@@ -127,6 +60,6 @@ export function useSubscription() {
     dailyCallCount,
     trackDebateSession,
     endDebateSession,
-    refetch: fetchSubscription,
+    refetch: () => {},
   };
 }
