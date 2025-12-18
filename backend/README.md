@@ -1,42 +1,51 @@
-# LearnHub Backend API
+# DebateHub Backend API
 
-FastAPI backend for the LearnHub course selling platform.
+Enterprise-grade FastAPI backend with PostgreSQL, following clean architecture principles and industry best practices.
 
-## Setup
+## Architecture
 
-1. Create a virtual environment:
+```
+backend/
+├── app/
+│   ├── config/          # Configuration and settings
+│   ├── models/          # SQLAlchemy ORM models
+│   ├── schemas/         # Pydantic schemas/DTOs
+│   ├── repositories/    # Data access layer
+│   ├── services/        # Business logic layer
+│   ├── routes/          # API endpoints/controllers
+│   ├── middleware/      # Custom middleware
+│   ├── utils/           # Utility functions
+│   └── main.py          # Application entry point
+├── alembic/             # Database migrations
+├── tests/               # Test suite
+├── Dockerfile
+├── docker-compose.yml
+└── requirements.txt
+```
+
+## Quick Start with Docker
+
 ```bash
-cd backend
-python3 -m venv venv
+docker-compose up -d
+docker-compose exec backend alembic upgrade head
+```
+
+## Local Development
+
+```bash
+python -m venv venv
 source venv/bin/activate
-```
-
-2. Install dependencies:
-```bash
 pip install -r requirements.txt
+source env.sh
+alembic upgrade head
+uvicorn app.main:app --reload
 ```
 
-3. Make sure the environment variables are set (they should already be in the .env file in the project root):
-- VITE_SUPABASE_URL
-- VITE_SUPABASE_ANON_KEY
+## API Documentation
 
-4. Run the server:
-```bash
-python main.py
-```
+- Swagger UI: http://localhost:8000/docs
+- ReDoc: http://localhost:8000/redoc
 
-The API will be available at http://localhost:8000
+## Environment Variables
 
-## API Endpoints
-
-- `GET /` - Welcome message
-- `GET /api/categories` - Get all categories
-- `GET /api/courses` - Get all courses
-- `GET /api/courses/{course_id}` - Get a specific course
-- `GET /api/instructors` - Get all instructors
-- `GET /api/testimonials` - Get all testimonials
-- `GET /api/stats` - Get platform statistics
-
-## Documentation
-
-Once the server is running, visit http://localhost:8000/docs for interactive API documentation.
+See `.env.example` for all configuration options.
