@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
+import { rtcLogger } from '../utils/logger';
 
 const SOCKET_URL = 'https://mycourse-32jb.onrender.com/';
 
@@ -33,6 +34,7 @@ export function useWebRTC() {
   const initializeSocket = () => {
     if (socketRef.current || socketInitialized) return;
 
+    rtcLogger.info('Initializing WebRTC socket connection', { socketUrl: SOCKET_URL });
     setSocketInitialized(true);
     socketRef.current = io(SOCKET_URL, {
       transports: ['websocket', 'polling'],
@@ -40,17 +42,17 @@ export function useWebRTC() {
     });
 
     socketRef.current.on('connected', (data) => {
-      console.log('Connected to signaling server:', data.sid);
+      rtcLogger.info('Connected to signaling server', { sessionId: data.sid });
     });
 
     socketRef.current.on('match-request', (data: MatchRequest) => {
-      console.log('Match request received:', data);
+      rtcLogger.info('Match request received', { partnerId: data.partnerId, topic: data.topic });
       pendingMatchRef.current = data;
       setMatchRequest(data);
     });
 
     socketRef.current.on('match-found', async (data) => {
-      console.log('Match found:', data);
+      rtcLogger.info('Match found, establishing connection', { partnerId: data.partnerId, initiator: data.initiator });
       partnerIdRef.current = data.partnerId;
       setIsSearching(false);
       setIsConnected(true);
@@ -60,18 +62,18 @@ export function useWebRTC() {
     });
 
     socketRef.current.on('match-rejected', () => {
-      console.log('Match was rejected');
+      rtcLogger.info('Match was rejected, continuing search');
       setMatchRequest(null);
       pendingMatchRef.current = null;
       setIsSearching(true);
     });
 
     socketRef.current.on('waiting', (data) => {
-      console.log(data.message);
+      rtcLogger.debug('Waiting for match', { message: data.message });
     });
 
     socketRef.current.on('offer', async (data) => {
-      console.log('Received offer from:', data.sender);
+      rtcLogger.debug('Received WebRTC offer', { sender: data.sender });
       if (peerConnectionRef.current) {
         await peerConnectionRef.current.setRemoteDescription(
           new RTCSessionDescription(data.offer)
@@ -83,11 +85,12 @@ export function useWebRTC() {
           target: data.sender,
           answer: answer,
         });
+        rtcLogger.debug('Sent WebRTC answer', { target: data.sender });
       }
     });
 
     socketRef.current.on('answer', async (data) => {
-      console.log('Received answer from:', data.sender);
+      rtcLogger.debug('Received WebRTC answer', { sender: data.sender });
       if (peerConnectionRef.current) {
         await peerConnectionRef.current.setRemoteDescription(
           new RTCSessionDescription(data.answer)
@@ -96,25 +99,25 @@ export function useWebRTC() {
     });
 
     socketRef.current.on('ice_candidate', async (data) => {
-      console.log('Received ICE candidate from:', data.sender);
+      rtcLogger.debug('Received ICE candidate', { sender: data.sender });
       if (peerConnectionRef.current && data.candidate) {
         try {
           await peerConnectionRef.current.addIceCandidate(
             new RTCIceCandidate(data.candidate)
           );
         } catch (e) {
-          console.error('Error adding ICE candidate:', e);
+          rtcLogger.error('Error adding ICE candidate', e);
         }
       }
     });
 
     socketRef.current.on('peer-disconnected', () => {
-      console.log('Peer disconnected');
+      rtcLogger.info('Peer disconnected');
       cleanup();
     });
 
     socketRef.current.on('peer-left', () => {
-      console.log('Peer left the room');
+      rtcLogger.info('Peer left the room');
       cleanup();
     });
 
@@ -131,12 +134,18 @@ export function useWebRTC() {
   }, []);
 
   const setupPeerConnection = async (initiator: boolean) => {
+    rtcLogger.info('Setting up peer connection', { initiator });
     try {
+      rtcLogger.debug('Requesting user media access');
       const stream = await navigator.mediaDevices.getUserMedia({
         video: true,
         audio: true,
       });
 
+      rtcLogger.info('Media access granted', {
+        videoTracks: stream.getVideoTracks().length,
+        audioTracks: stream.getAudioTracks().length
+      });
       setLocalStream(stream);
 
       const peerConnection = new RTCPeerConnection(ICE_SERVERS);
@@ -147,12 +156,13 @@ export function useWebRTC() {
       });
 
       peerConnection.ontrack = (event) => {
-        console.log('Received remote track');
+        rtcLogger.info('Received remote track', { streamId: event.streams[0]?.id });
         setRemoteStream(event.streams[0]);
       };
 
       peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
+          rtcLogger.debug('Sending ICE candidate to peer');
           socketRef.current?.emit('ice_candidate', {
             target: partnerIdRef.current,
             candidate: event.candidate,
@@ -161,13 +171,14 @@ export function useWebRTC() {
       };
 
       peerConnection.onconnectionstatechange = () => {
-        console.log('Connection state:', peerConnection.connectionState);
+        rtcLogger.info('Connection state changed', { state: peerConnection.connectionState });
         if (peerConnection.connectionState === 'disconnected') {
           cleanup();
         }
       };
 
       if (initiator) {
+        rtcLogger.debug('Creating and sending WebRTC offer');
         const offer = await peerConnection.createOffer();
         await peerConnection.setLocalDescription(offer);
 
@@ -177,22 +188,25 @@ export function useWebRTC() {
         });
       }
     } catch (err) {
-      console.error('Error setting up peer connection:', err);
+      rtcLogger.error('Error setting up peer connection', err);
       setError('Failed to access camera/microphone');
     }
   };
 
   const startSearch = (topic: string = 'general', email: string = 'Anonymous') => {
+    rtcLogger.info('Starting debate partner search', { topic, email });
     initializeSocket();
     setIsSearching(true);
     setError(null);
     setTimeout(() => {
       socketRef.current?.emit('find_match', { topic, email });
+      rtcLogger.debug('Find match request sent', { topic });
     }, 100);
   };
 
   const acceptMatch = () => {
     if (pendingMatchRef.current) {
+      rtcLogger.info('Accepting match', { partnerId: pendingMatchRef.current.partnerId });
       socketRef.current?.emit('accept_match', {
         partnerId: pendingMatchRef.current.partnerId
       });
@@ -202,6 +216,7 @@ export function useWebRTC() {
 
   const rejectMatch = () => {
     if (pendingMatchRef.current) {
+      rtcLogger.info('Rejecting match', { partnerId: pendingMatchRef.current.partnerId });
       socketRef.current?.emit('reject_match', {
         partnerId: pendingMatchRef.current.partnerId
       });
@@ -211,17 +226,20 @@ export function useWebRTC() {
   };
 
   const cancelSearch = () => {
+    rtcLogger.info('Cancelling debate partner search');
     setIsSearching(false);
     setMatchRequest(null);
     socketRef.current?.emit('cancel_search', {});
   };
 
   const endCall = () => {
+    rtcLogger.info('Ending video call');
     socketRef.current?.emit('leave_room', {});
     cleanup();
   };
 
   const cleanup = () => {
+    rtcLogger.debug('Cleaning up WebRTC resources');
     if (localStream) {
       localStream.getTracks().forEach((track) => track.stop());
       setLocalStream(null);
@@ -240,6 +258,7 @@ export function useWebRTC() {
     partnerIdRef.current = null;
     setIsConnected(false);
     setIsSearching(false);
+    rtcLogger.info('WebRTC cleanup complete');
   };
 
   return {

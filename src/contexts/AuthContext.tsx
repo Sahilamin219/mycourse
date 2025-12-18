@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import * as api from '../api';
+import { authLogger } from '../utils/logger';
 
 interface User {
   id: string;
@@ -36,52 +37,72 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    authLogger.info('Initializing auth context');
     const storedToken = localStorage.getItem(TOKEN_KEY);
     const storedUser = localStorage.getItem(USER_KEY);
 
     if (storedToken && storedUser) {
+      authLogger.debug('Found stored auth credentials, restoring session');
       try {
         setAccessToken(storedToken);
         setUser(JSON.parse(storedUser));
+        authLogger.debug('Validating stored session with backend');
         api.getCurrentUser(storedToken).then((user) => {
+          authLogger.info('Session validated successfully', { userId: user.id });
           setUser(user);
           localStorage.setItem(USER_KEY, JSON.stringify(user));
-        }).catch(() => {
+        }).catch((error) => {
+          authLogger.warn('Session validation failed, clearing stored credentials', { error: error.message });
           localStorage.removeItem(TOKEN_KEY);
           localStorage.removeItem(USER_KEY);
           setAccessToken(null);
           setUser(null);
         });
-      } catch {
+      } catch (error) {
+        authLogger.error('Failed to parse stored credentials', error);
         localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem(USER_KEY);
       }
+    } else {
+      authLogger.debug('No stored credentials found');
     }
 
     setLoading(false);
   }, []);
 
   const signIn = async (email: string, password: string) => {
+    authLogger.info('Sign in initiated', { email });
     setLoading(true);
     try {
       const response = await api.signIn(email, password);
+      authLogger.info('Sign in successful, storing credentials', { userId: response.user.id });
       setAccessToken(response.access_token);
       setUser(response.user);
       localStorage.setItem(TOKEN_KEY, response.access_token);
       localStorage.setItem(USER_KEY, JSON.stringify(response.user));
+      authLogger.debug('Auth credentials stored in localStorage');
+    } catch (error) {
+      authLogger.error('Sign in failed in AuthContext', error, { email });
+      throw error;
     } finally {
       setLoading(false);
     }
   };
 
   const signUp = async (email: string, password: string, fullName?: string) => {
+    authLogger.info('Sign up initiated', { email, hasFullName: !!fullName });
     setLoading(true);
     try {
       const response = await api.signUp(email, password, fullName);
+      authLogger.info('Sign up successful, storing credentials', { userId: response.user.id });
       setAccessToken(response.access_token);
       setUser(response.user);
       localStorage.setItem(TOKEN_KEY, response.access_token);
       localStorage.setItem(USER_KEY, JSON.stringify(response.user));
+      authLogger.debug('Auth credentials stored in localStorage');
+    } catch (error) {
+      authLogger.error('Sign up failed in AuthContext', error, { email });
+      throw error;
     } finally {
       setLoading(false);
     }
@@ -92,10 +113,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
+    authLogger.info('Sign out initiated', { userId: user?.id });
     setAccessToken(null);
     setUser(null);
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
+    authLogger.info('Sign out complete');
   };
 
   return (

@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config.settings import settings
 from app.config.database import init_db
 from app.routes import auth_router, debates_router, resources_router, notifications_router
+from app.utils.logger import api_logger
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -21,11 +22,15 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def startup_event():
+    api_logger.info(f"Starting {settings.APP_NAME} v{settings.APP_VERSION}")
+    api_logger.info("Initializing database connection")
     init_db()
+    api_logger.info("Application startup complete")
 
 
 @app.get("/")
 async def root():
+    api_logger.debug("Root endpoint accessed")
     return {
         "message": f"Welcome to {settings.APP_NAME}",
         "version": settings.APP_VERSION,
@@ -35,6 +40,7 @@ async def root():
 
 @app.get("/health")
 async def health_check():
+    api_logger.debug("Health check endpoint accessed")
     return {
         "status": "healthy",
         "database": "PostgreSQL"

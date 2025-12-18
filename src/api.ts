@@ -1,4 +1,5 @@
 import type { DebateTopic, Resource, Testimonial, Stats } from './types';
+import { apiLogger } from './utils/logger';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -56,46 +57,76 @@ const getAuthHeaders = (token?: string) => {
 };
 
 export async function signUp(email: string, password: string, fullName?: string): Promise<AuthResponse> {
-  const response = await fetch(`${API_URL}/auth/signup`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify({ email, password, full_name: fullName }),
-  });
+  apiLogger.info('Signing up user', { email, hasFullName: !!fullName });
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || 'Failed to sign up');
+  try {
+    const response = await fetch(`${API_URL}/auth/signup`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ email, password, full_name: fullName }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      apiLogger.error('Sign up failed', error, { email, status: response.status });
+      throw new Error(error.detail || 'Failed to sign up');
+    }
+
+    const data = await response.json();
+    apiLogger.info('User signed up successfully', { email, userId: data.user?.id });
+    return data;
+  } catch (error) {
+    apiLogger.error('Sign up request failed', error, { email });
+    throw error;
   }
-
-  return response.json();
 }
 
 export async function signIn(email: string, password: string): Promise<AuthResponse> {
-  const response = await fetch(`${API_URL}/auth/signin`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify({ email, password }),
-  });
+  apiLogger.info('Signing in user', { email });
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || 'Failed to sign in');
+  try {
+    const response = await fetch(`${API_URL}/auth/signin`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      apiLogger.error('Sign in failed', error, { email, status: response.status });
+      throw new Error(error.detail || 'Failed to sign in');
+    }
+
+    const data = await response.json();
+    apiLogger.info('User signed in successfully', { email, userId: data.user?.id });
+    return data;
+  } catch (error) {
+    apiLogger.error('Sign in request failed', error, { email });
+    throw error;
   }
-
-  return response.json();
 }
 
 export async function getCurrentUser(token: string): Promise<User> {
-  const response = await fetch(`${API_URL}/auth/me`, {
-    method: 'GET',
-    headers: getAuthHeaders(token),
-  });
+  apiLogger.debug('Fetching current user');
 
-  if (!response.ok) {
-    throw new Error('Failed to get current user');
+  try {
+    const response = await fetch(`${API_URL}/auth/me`, {
+      method: 'GET',
+      headers: getAuthHeaders(token),
+    });
+
+    if (!response.ok) {
+      apiLogger.error('Failed to get current user', null, { status: response.status });
+      throw new Error('Failed to get current user');
+    }
+
+    const data = await response.json();
+    apiLogger.debug('Current user fetched successfully', { userId: data.id });
+    return data;
+  } catch (error) {
+    apiLogger.error('Get current user request failed', error);
+    throw error;
   }
-
-  return response.json();
 }
 
 export async function createDebateSession(
@@ -103,44 +134,74 @@ export async function createDebateSession(
   topic: string,
   stance: string
 ): Promise<DebateSession> {
-  const response = await fetch(`${API_URL}/debates/sessions`, {
-    method: 'POST',
-    headers: getAuthHeaders(token),
-    body: JSON.stringify({ topic, stance }),
-  });
+  apiLogger.info('Creating debate session', { topic, stance });
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || 'Failed to create debate session');
+  try {
+    const response = await fetch(`${API_URL}/debates/sessions`, {
+      method: 'POST',
+      headers: getAuthHeaders(token),
+      body: JSON.stringify({ topic, stance }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      apiLogger.error('Failed to create debate session', error, { topic, stance, status: response.status });
+      throw new Error(error.detail || 'Failed to create debate session');
+    }
+
+    const data = await response.json();
+    apiLogger.info('Debate session created successfully', { sessionId: data.id, topic });
+    return data;
+  } catch (error) {
+    apiLogger.error('Create debate session request failed', error, { topic, stance });
+    throw error;
   }
-
-  return response.json();
 }
 
 export async function getDebateSessions(token: string): Promise<DebateSession[]> {
-  const response = await fetch(`${API_URL}/debates/sessions`, {
-    method: 'GET',
-    headers: getAuthHeaders(token),
-  });
+  apiLogger.debug('Fetching debate sessions');
 
-  if (!response.ok) {
-    throw new Error('Failed to fetch debate sessions');
+  try {
+    const response = await fetch(`${API_URL}/debates/sessions`, {
+      method: 'GET',
+      headers: getAuthHeaders(token),
+    });
+
+    if (!response.ok) {
+      apiLogger.error('Failed to fetch debate sessions', null, { status: response.status });
+      throw new Error('Failed to fetch debate sessions');
+    }
+
+    const data = await response.json();
+    apiLogger.info('Debate sessions fetched successfully', { count: data.length });
+    return data;
+  } catch (error) {
+    apiLogger.error('Get debate sessions request failed', error);
+    throw error;
   }
-
-  return response.json();
 }
 
 export async function getDebateSession(token: string, sessionId: string): Promise<DebateSession> {
-  const response = await fetch(`${API_URL}/debates/sessions/${sessionId}`, {
-    method: 'GET',
-    headers: getAuthHeaders(token),
-  });
+  apiLogger.debug('Fetching debate session', { sessionId });
 
-  if (!response.ok) {
-    throw new Error('Failed to fetch debate session');
+  try {
+    const response = await fetch(`${API_URL}/debates/sessions/${sessionId}`, {
+      method: 'GET',
+      headers: getAuthHeaders(token),
+    });
+
+    if (!response.ok) {
+      apiLogger.error('Failed to fetch debate session', null, { sessionId, status: response.status });
+      throw new Error('Failed to fetch debate session');
+    }
+
+    const data = await response.json();
+    apiLogger.debug('Debate session fetched successfully', { sessionId });
+    return data;
+  } catch (error) {
+    apiLogger.error('Get debate session request failed', error, { sessionId });
+    throw error;
   }
-
-  return response.json();
 }
 
 export async function createTranscript(
@@ -149,31 +210,51 @@ export async function createTranscript(
   speaker: string,
   text: string
 ): Promise<{ id: string; message: string }> {
-  const response = await fetch(`${API_URL}/debates/transcripts`, {
-    method: 'POST',
-    headers: getAuthHeaders(token),
-    body: JSON.stringify({ session_id: sessionId, speaker, text }),
-  });
+  apiLogger.debug('Creating transcript', { sessionId, speaker, textLength: text.length });
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || 'Failed to create transcript');
+  try {
+    const response = await fetch(`${API_URL}/debates/transcripts`, {
+      method: 'POST',
+      headers: getAuthHeaders(token),
+      body: JSON.stringify({ session_id: sessionId, speaker, text }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      apiLogger.error('Failed to create transcript', error, { sessionId, speaker, status: response.status });
+      throw new Error(error.detail || 'Failed to create transcript');
+    }
+
+    const data = await response.json();
+    apiLogger.debug('Transcript created successfully', { sessionId, transcriptId: data.id });
+    return data;
+  } catch (error) {
+    apiLogger.error('Create transcript request failed', error, { sessionId, speaker });
+    throw error;
   }
-
-  return response.json();
 }
 
 export async function getTranscripts(token: string, sessionId: string): Promise<any[]> {
-  const response = await fetch(`${API_URL}/debates/sessions/${sessionId}/transcripts`, {
-    method: 'GET',
-    headers: getAuthHeaders(token),
-  });
+  apiLogger.debug('Fetching transcripts', { sessionId });
 
-  if (!response.ok) {
-    throw new Error('Failed to fetch transcripts');
+  try {
+    const response = await fetch(`${API_URL}/debates/sessions/${sessionId}/transcripts`, {
+      method: 'GET',
+      headers: getAuthHeaders(token),
+    });
+
+    if (!response.ok) {
+      apiLogger.error('Failed to fetch transcripts', null, { sessionId, status: response.status });
+      throw new Error('Failed to fetch transcripts');
+    }
+
+    const data = await response.json();
+    apiLogger.debug('Transcripts fetched successfully', { sessionId, count: data.length });
+    return data;
+  } catch (error) {
+    apiLogger.error('Get transcripts request failed', error, { sessionId });
+    throw error;
   }
-
-  return response.json();
 }
 
 export async function analyzeDebate(
@@ -181,56 +262,96 @@ export async function analyzeDebate(
   sessionId: string,
   transcripts: any[]
 ): Promise<{ analysis: any; message: string }> {
-  const response = await fetch(`${API_URL}/debates/analyze`, {
-    method: 'POST',
-    headers: getAuthHeaders(token),
-    body: JSON.stringify({ session_id: sessionId, transcripts }),
-  });
+  apiLogger.info('Analyzing debate', { sessionId, transcriptCount: transcripts.length });
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || 'Failed to analyze debate');
+  try {
+    const response = await fetch(`${API_URL}/debates/analyze`, {
+      method: 'POST',
+      headers: getAuthHeaders(token),
+      body: JSON.stringify({ session_id: sessionId, transcripts }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      apiLogger.error('Failed to analyze debate', error, { sessionId, status: response.status });
+      throw new Error(error.detail || 'Failed to analyze debate');
+    }
+
+    const data = await response.json();
+    apiLogger.info('Debate analyzed successfully', { sessionId });
+    return data;
+  } catch (error) {
+    apiLogger.error('Analyze debate request failed', error, { sessionId });
+    throw error;
   }
-
-  return response.json();
 }
 
 export async function getResources(): Promise<Resource[]> {
-  const response = await fetch(`${API_URL}/resources`, {
-    method: 'GET',
-    headers: getAuthHeaders(),
-  });
+  apiLogger.debug('Fetching resources');
 
-  if (!response.ok) {
-    throw new Error('Failed to fetch resources');
+  try {
+    const response = await fetch(`${API_URL}/resources`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      apiLogger.error('Failed to fetch resources', null, { status: response.status });
+      throw new Error('Failed to fetch resources');
+    }
+
+    const data = await response.json();
+    apiLogger.info('Resources fetched successfully', { count: data.length });
+    return data;
+  } catch (error) {
+    apiLogger.error('Get resources request failed', error);
+    throw error;
   }
-
-  return response.json();
 }
 
 export const fetchResources = getResources;
 
 export async function getNotifications(token: string): Promise<any[]> {
-  const response = await fetch(`${API_URL}/notifications`, {
-    method: 'GET',
-    headers: getAuthHeaders(token),
-  });
+  apiLogger.debug('Fetching notifications');
 
-  if (!response.ok) {
-    throw new Error('Failed to fetch notifications');
+  try {
+    const response = await fetch(`${API_URL}/notifications`, {
+      method: 'GET',
+      headers: getAuthHeaders(token),
+    });
+
+    if (!response.ok) {
+      apiLogger.error('Failed to fetch notifications', null, { status: response.status });
+      throw new Error('Failed to fetch notifications');
+    }
+
+    const data = await response.json();
+    apiLogger.info('Notifications fetched successfully', { count: data.length });
+    return data;
+  } catch (error) {
+    apiLogger.error('Get notifications request failed', error);
+    throw error;
   }
-
-  return response.json();
 }
 
 export async function markNotificationAsRead(token: string, notificationId: string): Promise<void> {
-  const response = await fetch(`${API_URL}/notifications/${notificationId}/read`, {
-    method: 'PUT',
-    headers: getAuthHeaders(token),
-  });
+  apiLogger.debug('Marking notification as read', { notificationId });
 
-  if (!response.ok) {
-    throw new Error('Failed to mark notification as read');
+  try {
+    const response = await fetch(`${API_URL}/notifications/${notificationId}/read`, {
+      method: 'PUT',
+      headers: getAuthHeaders(token),
+    });
+
+    if (!response.ok) {
+      apiLogger.error('Failed to mark notification as read', null, { notificationId, status: response.status });
+      throw new Error('Failed to mark notification as read');
+    }
+
+    apiLogger.debug('Notification marked as read successfully', { notificationId });
+  } catch (error) {
+    apiLogger.error('Mark notification as read request failed', error, { notificationId });
+    throw error;
   }
 }
 
@@ -261,6 +382,15 @@ export async function fetchStats(): Promise<Stats> {
 }
 
 export async function generateDebateAnalysis(sessionId: string, accessToken: string) {
-  const transcripts = await getTranscripts(accessToken, sessionId);
-  return analyzeDebate(accessToken, sessionId, transcripts);
+  apiLogger.info('Generating debate analysis', { sessionId });
+
+  try {
+    const transcripts = await getTranscripts(accessToken, sessionId);
+    const result = await analyzeDebate(accessToken, sessionId, transcripts);
+    apiLogger.info('Debate analysis generated successfully', { sessionId });
+    return result;
+  } catch (error) {
+    apiLogger.error('Failed to generate debate analysis', error, { sessionId });
+    throw error;
+  }
 }
