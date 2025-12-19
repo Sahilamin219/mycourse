@@ -2,7 +2,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config.settings import settings
 from app.config.database import init_db
-from app.routes import auth_router, debates_router, resources_router, notifications_router
+from app.routes import (
+    auth_router,
+    debates_router,
+    resources_router,
+    notifications_router,
+    country_debates_router,
+    referrals_router
+)
 from app.utils.logger import api_logger
 
 app = FastAPI(
@@ -51,6 +58,8 @@ app.include_router(auth_router, prefix=settings.API_PREFIX)
 app.include_router(debates_router, prefix=settings.API_PREFIX)
 app.include_router(resources_router, prefix=settings.API_PREFIX)
 app.include_router(notifications_router, prefix=settings.API_PREFIX)
+app.include_router(country_debates_router, prefix=settings.API_PREFIX)
+app.include_router(referrals_router, prefix=settings.API_PREFIX)
 
 
 if __name__ == "__main__":
