@@ -12,10 +12,12 @@ import { AuthModal } from './components/AuthModal';
 import { PricingModal } from './components/PricingModal';
 import { UserDashboard } from './components/UserDashboard';
 import ImproveYourself from './components/ImproveYourself';
+import CountryDebate from './components/CountryDebate';
+import ReferralSystem from './components/ReferralSystem';
 import { useAuth } from './contexts/AuthContext';
 import { useSubscription } from './hooks/useSubscription';
 
-type View = 'home' | 'dashboard' | 'improve';
+type View = 'home' | 'dashboard' | 'improve' | 'country-debates' | 'referrals';
 
 function App() {
   const [showDebateRoom, setShowDebateRoom] = useState(false);
@@ -58,9 +60,13 @@ function App() {
           onUpgrade={handleUpgrade}
           onDashboard={() => setCurrentView('dashboard')}
           onImprove={() => setCurrentView('improve')}
+          onCountryDebates={() => setCurrentView('country-debates')}
+          onReferrals={() => setCurrentView('referrals')}
         />
         {currentView === 'dashboard' && <UserDashboard />}
         {currentView === 'improve' && <ImproveYourself />}
+        {currentView === 'country-debates' && <CountryDebate />}
+        {currentView === 'referrals' && <ReferralSystem />}
         <button
           onClick={() => setCurrentView('home')}
           className="fixed bottom-8 right-8 bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-6 py-3 rounded-full font-semibold shadow-lg hover:shadow-emerald-500/50 transition-all duration-300 z-50"
@@ -88,6 +94,8 @@ function App() {
         onUpgrade={handleUpgrade}
         onDashboard={() => setCurrentView('dashboard')}
         onImprove={() => setCurrentView('improve')}
+        onCountryDebates={() => setCurrentView('country-debates')}
+        onReferrals={() => setCurrentView('referrals')}
       />
       <Hero onStartDebate={handleStartDebate} />
       <HowItWorks />

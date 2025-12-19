@@ -44,3 +44,17 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserResponse
+
+
+class ReferralResponse(BaseModel):
+    referral_code: str
+    total_referrals: int
+    total_coins_earned: int
+
+
+class ReferralApply(BaseModel):
+    referral_code: str = Field(..., min_length=8, max_length=8)
+
+
+class CoinBalanceResponse(BaseModel):
+    coins: int

@@ -1,4 +1,4 @@
-import { Menu, X, Video, MessageSquare, LogOut, User, Crown, Sparkles, Search, LayoutDashboard, Trophy, Award, Gift, UserCircle, BookOpen } from 'lucide-react';
+import { Menu, X, Video, MessageSquare, LogOut, User, Crown, Sparkles, Search, LayoutDashboard, Trophy, Award, Gift, UserCircle, BookOpen, Globe } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSubscription } from '../hooks/useSubscription';
@@ -9,9 +9,11 @@ interface NavigationProps {
   onUpgrade: () => void;
   onDashboard?: () => void;
   onImprove?: () => void;
+  onCountryDebates?: () => void;
+  onReferrals?: () => void;
 }
 
-export function Navigation({ onStartDebate, onSignIn, onUpgrade, onDashboard, onImprove }: NavigationProps) {
+export function Navigation({ onStartDebate, onSignIn, onUpgrade, onDashboard, onImprove, onCountryDebates, onReferrals }: NavigationProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
   const { user, signOut } = useAuth();
@@ -114,6 +116,18 @@ export function Navigation({ onStartDebate, onSignIn, onUpgrade, onDashboard, on
                       className="w-full px-4 py-3 text-left text-gray-300 hover:text-white hover:bg-white/5 transition-all duration-300 flex items-center space-x-2">
                       <BookOpen size={18} />
                       <span>Improve Yourself</span>
+                    </button>
+                    <button
+                      onClick={onCountryDebates}
+                      className="w-full px-4 py-3 text-left text-gray-300 hover:text-white hover:bg-white/5 transition-all duration-300 flex items-center space-x-2">
+                      <Globe size={18} />
+                      <span>Country Debates</span>
+                    </button>
+                    <button
+                      onClick={onReferrals}
+                      className="w-full px-4 py-3 text-left text-gray-300 hover:text-white hover:bg-white/5 transition-all duration-300 flex items-center space-x-2">
+                      <Gift size={18} />
+                      <span>Referrals</span>
                     </button>
                     <div className="border-t border-emerald-500/10"></div>
                     <button
@@ -218,6 +232,24 @@ export function Navigation({ onStartDebate, onSignIn, onUpgrade, onDashboard, on
                     className="w-full bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white px-4 py-3 rounded-lg transition-all duration-300 mb-3 flex items-center justify-center space-x-2">
                     <BookOpen size={18} />
                     <span>Improve Yourself</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      onCountryDebates?.();
+                      setMobileMenuOpen(false);
+                    }}
+                    className="w-full bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white px-4 py-3 rounded-lg transition-all duration-300 mb-3 flex items-center justify-center space-x-2">
+                    <Globe size={18} />
+                    <span>Country Debates</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      onReferrals?.();
+                      setMobileMenuOpen(false);
+                    }}
+                    className="w-full bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white px-4 py-3 rounded-lg transition-all duration-300 mb-3 flex items-center justify-center space-x-2">
+                    <Gift size={18} />
+                    <span>Referrals</span>
                   </button>
                   <button
                     onClick={() => {
