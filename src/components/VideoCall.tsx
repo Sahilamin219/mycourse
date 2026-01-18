@@ -21,6 +21,7 @@ export function VideoCall({ localStream, remoteStream, onEndCall, topic, session
   const [savedTranscriptCount, setSavedTranscriptCount] = useState(0);
 
   const { isListening, transcripts, startListening, stopListening } = useSpeechRecognition();
+  const { accessToken } = useAuth();
 
   useEffect(() => {
     if (localVideoRef.current && localStream) {
@@ -46,25 +47,22 @@ export function VideoCall({ localStream, remoteStream, onEndCall, topic, session
 
   useEffect(() => {
     const saveNewTranscripts = async () => {
-      if (!sessionId || transcripts.length === 0) return;
+      if (!sessionId || !accessToken || transcripts.length === 0) return;
       if (transcripts.length <= savedTranscriptCount) return;
 
       const newTranscripts = transcripts.slice(savedTranscriptCount);
-      const transcriptRecords = newTranscripts.map(t => ({
-        session_id: sessionId,
-        speaker: t.speaker,
-        text: t.text,
-        timestamp: t.timestamp.toISOString(),
-      }));
 
       try {
-        const { error } = await supabase
-          .from('debate_transcripts')
-          .insert(transcriptRecords);
-
-        if (!error) {
-          setSavedTranscriptCount(transcripts.length);
+        // Save each transcript individually via API
+        for (const transcript of newTranscripts) {
+          await api.createTranscript(
+            accessToken,
+            sessionId,
+            transcript.speaker,
+            transcript.text
+          );
         }
+        setSavedTranscriptCount(transcripts.length);
       } catch (error) {
         console.error('Error auto-saving transcripts:', error);
       }
@@ -72,7 +70,7 @@ export function VideoCall({ localStream, remoteStream, onEndCall, topic, session
 
     const debounceTimer = setTimeout(saveNewTranscripts, 2000);
     return () => clearTimeout(debounceTimer);
-  }, [transcripts, sessionId, savedTranscriptCount]);
+  }, [transcripts, sessionId, savedTranscriptCount, accessToken]);
 
   const toggleVideo = () => {
     if (localStream) {

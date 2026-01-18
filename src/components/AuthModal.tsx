@@ -71,6 +71,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
     setLoading(true);
     try {
       await signInWithGoogle();
+      onClose();
     } catch (err: any) {
       setError(err.message || 'Failed to sign in with Google');
     } finally {

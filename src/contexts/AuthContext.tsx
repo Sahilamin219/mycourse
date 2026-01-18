@@ -109,7 +109,99 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signInWithGoogle = async () => {
-    throw new Error('Google sign-in is not implemented');
+    authLogger.info('Google sign in initiated');
+    setLoading(true);
+    
+    try {
+      // Wait for Google Identity Services to load
+      if (typeof window === 'undefined') {
+        throw new Error('Window is not available');
+      }
+
+      // Wait for Google to be available
+      await new Promise<void>((resolve, reject) => {
+        if ((window as any).google) {
+          resolve();
+          return;
+        }
+        
+        let attempts = 0;
+        const checkGoogle = setInterval(() => {
+          attempts++;
+          if ((window as any).google) {
+            clearInterval(checkGoogle);
+            resolve();
+          } else if (attempts > 50) {
+            clearInterval(checkGoogle);
+            reject(new Error('Google Identity Services failed to load'));
+          }
+        }, 100);
+      });
+
+      const google = (window as any).google;
+      const clientId = '938233228671-8ubrr8imhf09e98qns67ep554901a91n.apps.googleusercontent.com'// import.meta.env.VITE_GOOGLE_CLIENT_ID;
+      
+      if (!clientId) {
+        throw new Error('Google Client ID not configured. Please set VITE_GOOGLE_CLIENT_ID in your environment variables.');
+      }
+
+      // Use OAuth2 flow to get access token and user info
+      return new Promise<void>((resolve, reject) => {
+        const tokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: clientId,
+          scope: 'openid email profile',
+          callback: async (tokenResponse: any) => {
+            try {
+              if (tokenResponse.error) {
+                throw new Error(tokenResponse.error);
+              }
+
+              if (!tokenResponse.access_token) {
+                throw new Error('No access token received from Google');
+              }
+
+              // Get user info from Google
+              const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+                headers: {
+                  Authorization: `Bearer ${tokenResponse.access_token}`,
+                },
+              });
+
+              if (!userInfoResponse.ok) {
+                throw new Error('Failed to get user info from Google');
+              }
+
+              const userInfo = await userInfoResponse.json();
+              authLogger.debug('Google user info received', { email: userInfo.email });
+
+              // Send to backend for authentication
+              const authResponse = await api.signInWithGoogle(userInfo);
+              
+              authLogger.info('Google sign in successful, storing credentials', { userId: authResponse.user.id });
+              setAccessToken(authResponse.access_token);
+              setUser(authResponse.user);
+              localStorage.setItem(TOKEN_KEY, authResponse.access_token);
+              localStorage.setItem(USER_KEY, JSON.stringify(authResponse.user));
+              authLogger.debug('Auth credentials stored in localStorage');
+              
+              setLoading(false);
+              resolve();
+            } catch (error) {
+              authLogger.error('Google sign in failed in AuthContext', error);
+              setLoading(false);
+              reject(error);
+            }
+          },
+        });
+
+        // Request access token (this will show the Google sign-in popup)
+        tokenClient.requestAccessToken();
+      });
+    } catch (error) {
+      authLogger.error('Google sign in failed', error);
+      setLoading(false);
+      throw error;
+    }
   };
 
   const signOut = async () => {

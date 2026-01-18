@@ -22,6 +22,7 @@ export function useWebRTC() {
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
+  const [isWaitingForPartner, setIsWaitingForPartner] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [matchRequest, setMatchRequest] = useState<MatchRequest | null>(null);
   const [socketInitialized, setSocketInitialized] = useState(false);
@@ -55,10 +56,18 @@ export function useWebRTC() {
       rtcLogger.info('Match found, establishing connection', { partnerId: data.partnerId, initiator: data.initiator });
       partnerIdRef.current = data.partnerId;
       setIsSearching(false);
+      setIsWaitingForPartner(false);
       setIsConnected(true);
       setMatchRequest(null);
+      pendingMatchRef.current = null;
 
       await setupPeerConnection(data.initiator);
+    });
+
+    socketRef.current.on('match-accepted-waiting', (data) => {
+      rtcLogger.info('Match accepted, waiting for partner', { message: data.message });
+      setIsSearching(false);
+      setIsWaitingForPartner(true);
     });
 
     socketRef.current.on('match-rejected', () => {
@@ -210,6 +219,7 @@ export function useWebRTC() {
       socketRef.current?.emit('accept_match', {
         partnerId: pendingMatchRef.current.partnerId
       });
+      setIsWaitingForPartner(true);
       setMatchRequest(null);
     }
   };
@@ -258,6 +268,7 @@ export function useWebRTC() {
     partnerIdRef.current = null;
     setIsConnected(false);
     setIsSearching(false);
+    setIsWaitingForPartner(false);
     rtcLogger.info('WebRTC cleanup complete');
   };
 
@@ -266,6 +277,7 @@ export function useWebRTC() {
     remoteStream,
     isSearching,
     isConnected,
+    isWaitingForPartner,
     error,
     matchRequest,
     startSearch,

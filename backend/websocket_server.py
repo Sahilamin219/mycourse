@@ -18,6 +18,7 @@ waiting_users: Dict[str, Dict] = {}
 rooms: Dict[str, Set[str]] = {}
 user_rooms: Dict[str, str] = {}
 user_info: Dict[str, Dict] = {}
+pending_acceptances: Dict[str, Set[str]] = {}  # room_id -> set of sids who accepted
 
 
 @sio.event
@@ -45,6 +46,13 @@ async def disconnect(sid):
                 del rooms[room_id]
 
         del user_rooms[sid]
+    
+    # Clean up pending acceptances
+    for room_id, accepted_sids in list(pending_acceptances.items()):
+        if sid in accepted_sids:
+            accepted_sids.discard(sid)
+            if len(accepted_sids) == 0:
+                del pending_acceptances[room_id]
 
     if sid in user_info:
         del user_info[sid]
@@ -98,27 +106,62 @@ async def accept_match(sid, data):
     if not partner_sid:
         return
 
-    room_id = str(uuid.uuid4())
-    rooms[room_id] = {sid, partner_sid}
-    user_rooms[sid] = room_id
-    user_rooms[partner_sid] = room_id
+    # Check if partner has already accepted (they would have created a room)
+    # Look for a room where partner_sid is waiting
+    room_id = None
+    initiator_sid = None
+    
+    # Check if partner already accepted and is waiting
+    if partner_sid in user_rooms:
+        room_id = user_rooms[partner_sid]
+        if room_id in pending_acceptances:
+            # Partner is waiting, this is the second acceptance
+            pending_acceptances[room_id].add(sid)
+            initiator_sid = list(pending_acceptances[room_id])[0]
+    else:
+        # This is the first acceptance, create new room
+        room_id = str(uuid.uuid4())
+        rooms[room_id] = {sid, partner_sid}
+        pending_acceptances[room_id] = {sid}
+        user_rooms[sid] = room_id
+        await sio.enter_room(sid, room_id)
+    
+    # Check if both users have accepted
+    if room_id in pending_acceptances and len(pending_acceptances[room_id]) == 2:
+        # Both users accepted, emit match-found to both
+        if partner_sid not in user_rooms:
+            user_rooms[partner_sid] = room_id
+            await sio.enter_room(partner_sid, room_id)
+        
+        if sid not in user_rooms:
+            user_rooms[sid] = room_id
+            await sio.enter_room(sid, room_id)
+        
+        # Determine initiator (first to accept)
+        if not initiator_sid:
+            initiator_sid = list(pending_acceptances[room_id])[0]
+        
+        await sio.emit('match-found', {
+            'roomId': room_id,
+            'partnerId': partner_sid,
+            'initiator': (sid == initiator_sid)
+        }, room=sid)
 
-    await sio.enter_room(sid, room_id)
-    await sio.enter_room(partner_sid, room_id)
+        await sio.emit('match-found', {
+            'roomId': room_id,
+            'partnerId': sid,
+            'initiator': (partner_sid == initiator_sid)
+        }, room=partner_sid)
 
-    await sio.emit('match-found', {
-        'roomId': room_id,
-        'partnerId': partner_sid,
-        'initiator': True
-    }, room=sid)
-
-    await sio.emit('match-found', {
-        'roomId': room_id,
-        'partnerId': sid,
-        'initiator': False
-    }, room=partner_sid)
-
-    print(f'Match accepted: {sid} <-> {partner_sid} in room {room_id}')
+        print(f'Match accepted by both: {sid} <-> {partner_sid} in room {room_id}')
+        # Clean up pending acceptances
+        del pending_acceptances[room_id]
+    else:
+        # Only one user accepted so far, notify them they're waiting
+        await sio.emit('match-accepted-waiting', {
+            'message': 'Waiting for partner to accept...'
+        }, room=sid)
+        print(f'Match partially accepted: {sid} accepted, waiting for {partner_sid}')
 
 
 @sio.event

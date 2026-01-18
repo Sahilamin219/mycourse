@@ -4,7 +4,7 @@ export APP_NAME="DebateHub API"
 export APP_VERSION="1.0.0"
 export DEBUG="false"
 
-export DATABASE_URL="postgresql://debateuser:debatepassword@localhost:5432/debatehub"
+export DATABASE_URL="postgresql://sahilamin:debatepassword@localhost:5432/postgres"
 export JWT_SECRET_KEY="your-super-secret-jwt-key-change-this-in-production"
 export JWT_ALGORITHM="HS256"
 export ACCESS_TOKEN_EXPIRE_MINUTES="43200"

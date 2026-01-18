@@ -106,6 +106,36 @@ export async function signIn(email: string, password: string): Promise<AuthRespo
   }
 }
 
+export async function signInWithGoogle(userInfo: { email: string; name?: string; picture?: string; id: string }): Promise<AuthResponse> {
+  apiLogger.info('Signing in user with Google', { email: userInfo.email });
+
+  try {
+    const response = await fetch(`${API_URL}/auth/google`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ 
+        email: userInfo.email,
+        full_name: userInfo.name,
+        google_id: userInfo.id,
+        picture: userInfo.picture,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      apiLogger.error('Google sign in failed', error, { status: response.status });
+      throw new Error(error.detail || 'Failed to sign in with Google');
+    }
+
+    const data = await response.json();
+    apiLogger.info('User signed in with Google successfully', { userId: data.user?.id });
+    return data;
+  } catch (error) {
+    apiLogger.error('Google sign in request failed', error);
+    throw error;
+  }
+}
+
 export async function getCurrentUser(token: string): Promise<User> {
   apiLogger.debug('Fetching current user');
 
@@ -200,6 +230,35 @@ export async function getDebateSession(token: string, sessionId: string): Promis
     return data;
   } catch (error) {
     apiLogger.error('Get debate session request failed', error, { sessionId });
+    throw error;
+  }
+}
+
+export async function updateDebateSession(
+  token: string,
+  sessionId: string,
+  duration: number
+): Promise<DebateSession> {
+  apiLogger.info('Updating debate session', { sessionId, duration });
+
+  try {
+    const response = await fetch(`${API_URL}/debates/sessions/${sessionId}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(token),
+      body: JSON.stringify({ duration }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      apiLogger.error('Failed to update debate session', error, { sessionId, duration, status: response.status });
+      throw new Error(error.detail || 'Failed to update debate session');
+    }
+
+    const data = await response.json();
+    apiLogger.info('Debate session updated successfully', { sessionId });
+    return data;
+  } catch (error) {
+    apiLogger.error('Update debate session request failed', error, { sessionId, duration });
     throw error;
   }
 }
@@ -386,7 +445,20 @@ export async function generateDebateAnalysis(sessionId: string, accessToken: str
 
   try {
     const transcripts = await getTranscripts(accessToken, sessionId);
-    const result = await analyzeDebate(accessToken, sessionId, transcripts);
+    apiLogger.info('Fetched transcripts for analysis', { sessionId, count: transcripts.length });
+    
+    if (transcripts.length === 0) {
+      throw new Error('No transcripts found for this debate session');
+    }
+    
+    // Format transcripts for analysis (ensure they match backend expectations)
+    const formattedTranscripts = transcripts.map(t => ({
+      speaker: t.speaker,
+      text: t.text,
+      timestamp: t.timestamp
+    }));
+    
+    const result = await analyzeDebate(accessToken, sessionId, formattedTranscripts);
     apiLogger.info('Debate analysis generated successfully', { sessionId });
     return result;
   } catch (error) {

@@ -30,6 +30,12 @@ class SignInRequest(BaseModel):
     email: EmailStr
     password: str
 
+class GoogleSignInRequest(BaseModel):
+    email: EmailStr
+    full_name: Optional[str] = None
+    google_id: str
+    picture: Optional[str] = None
+
 class DebateSessionCreate(BaseModel):
     topic: str
     stance: str
@@ -42,6 +48,9 @@ class TranscriptCreate(BaseModel):
 class AnalyzeDebateRequest(BaseModel):
     session_id: str
     transcripts: List[dict]
+
+class SessionUpdateRequest(BaseModel):
+    duration: int
 
 @app.get("/")
 async def root():
@@ -111,6 +120,63 @@ async def sign_in(request: SignInRequest, db: Session = Depends(get_db)):
         }
     }
 
+@app.post("/auth/google")
+async def sign_in_with_google(request: GoogleSignInRequest, db: Session = Depends(get_db)):
+    # Check if user exists with this email
+    user = db.query(User).filter(User.email == request.email).first()
+    
+    if user:
+        # User exists, sign them in
+        access_token = create_access_token(data={"sub": user.id})
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user": {
+                "id": user.id,
+                "email": user.email,
+                "full_name": user.full_name,
+                "subscription_tier": user.subscription_tier,
+                "subscription_status": user.subscription_status,
+                "points": user.points,
+                "level": user.level,
+                "badges": user.badges,
+                "streak_days": user.streak_days,
+                "debates_completed": user.debates_completed,
+                "created_at": user.created_at
+            }
+        }
+    else:
+        # User doesn't exist, create new account
+        new_user = User(
+            email=request.email,
+            password_hash="",  # No password for OAuth users
+            full_name=request.full_name,
+            subscription_tier="free",
+            subscription_status="active"
+        )
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+        
+        access_token = create_access_token(data={"sub": new_user.id})
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user": {
+                "id": new_user.id,
+                "email": new_user.email,
+                "full_name": new_user.full_name,
+                "subscription_tier": new_user.subscription_tier,
+                "subscription_status": new_user.subscription_status,
+                "points": new_user.points,
+                "level": new_user.level,
+                "badges": new_user.badges,
+                "streak_days": new_user.streak_days,
+                "debates_completed": new_user.debates_completed,
+                "created_at": new_user.created_at
+            }
+        }
+
 @app.get("/auth/me")
 async def get_me(current_user: User = Depends(get_current_user)):
     return {
@@ -166,6 +232,29 @@ async def get_debate_session(
     ).first()
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
+    return session
+
+@app.put("/debates/sessions/{session_id}")
+async def update_debate_session(
+    session_id: str,
+    request: SessionUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    session = db.query(DebateSession).filter(
+        DebateSession.id == session_id,
+        DebateSession.user_id == current_user.id
+    ).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    session.duration = request.duration
+    if request.duration > 0:
+        session.status = "completed"
+        session.completed_at = datetime.utcnow()
+    
+    db.commit()
+    db.refresh(session)
     return session
 
 @app.post("/debates/transcripts")

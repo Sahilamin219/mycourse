@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import * as api from '../api';
 
 export interface Subscription {
   id: string;
@@ -12,7 +13,7 @@ export interface Subscription {
 }
 
 export function useSubscription() {
-  const { user } = useAuth();
+  const { user, accessToken } = useAuth();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(false);
   const [dailyCallCount, setDailyCallCount] = useState(0);
@@ -42,14 +43,31 @@ export function useSubscription() {
   };
 
   const trackDebateSession = async (topic: string, partnerId?: string) => {
-    if (!user) return null;
+    if (!user || !accessToken) return null;
 
-    setDailyCallCount(prev => prev + 1);
-    return { id: Date.now().toString(), topic, partnerId };
+    try {
+      setDailyCallCount(prev => prev + 1);
+      // Create a real debate session via API
+      const session = await api.createDebateSession(
+        accessToken,
+        topic,
+        'for' // Default stance, can be made configurable later
+      );
+      return session;
+    } catch (error) {
+      console.error('Failed to create debate session:', error);
+      return null;
+    }
   };
 
   const endDebateSession = async (sessionId: string, durationSeconds: number) => {
-    return;
+    if (!accessToken) return;
+    
+    try {
+      await api.updateDebateSession(accessToken, sessionId, durationSeconds);
+    } catch (error) {
+      console.error('Error ending debate session:', error);
+    }
   };
 
   return {

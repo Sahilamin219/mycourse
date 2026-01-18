@@ -33,7 +33,7 @@ export function DebateRoom({ selectedTopic }: DebateRoomProps) {
   const [analysisData, setAnalysisData] = useState<any>(null);
   const [isGeneratingAnalysis, setIsGeneratingAnalysis] = useState(false);
 
-  const { user } = useAuth();
+  const { user, accessToken } = useAuth();
   const { trackDebateSession, endDebateSession } = useSubscription();
   const sessionIdRef = useRef<string | null>(null);
   const sessionStartRef = useRef<number | null>(null);
@@ -43,6 +43,7 @@ export function DebateRoom({ selectedTopic }: DebateRoomProps) {
     remoteStream,
     isSearching,
     isConnected,
+    isWaitingForPartner,
     error,
     matchRequest,
     startSearch,
@@ -90,23 +91,46 @@ export function DebateRoom({ selectedTopic }: DebateRoomProps) {
   };
 
   const handleEndCall = async () => {
-    if (sessionIdRef.current && sessionStartRef.current) {
-      const durationSeconds = Math.floor((Date.now() - sessionStartRef.current) / 1000);
-      await endDebateSession(sessionIdRef.current, durationSeconds);
-
+    const currentSessionId = sessionIdRef.current;
+    const currentSessionStart = sessionStartRef.current;
+    
+    if (currentSessionId && currentSessionStart) {
+      const durationSeconds = Math.floor((Date.now() - currentSessionStart) / 1000);
+      
+      // End the call and hide video
       endCall();
       setShowDebate(false);
 
+      // Update session duration
+      try {
+        await endDebateSession(currentSessionId, durationSeconds);
+      } catch (error) {
+        console.error('Error ending debate session:', error);
+      }
+
+      // Generate analysis if debate was long enough
       if (durationSeconds > 30) {
         setIsGeneratingAnalysis(true);
         try {
-          const session = await supabase.auth.getSession();
-          if (session.data.session) {
+          if (accessToken && currentSessionId) {
             const result = await generateDebateAnalysis(
-              sessionIdRef.current,
-              session.data.session.access_token
+              currentSessionId,
+              accessToken
             );
-            setAnalysisData(result.analysis);
+            
+            // Transform backend response to match report component expectations
+            const transformedAnalysis = {
+              overall_score: result.analysis?.overall_score || 0,
+              communication_score: result.analysis?.clarity_score || 0,
+              argumentation_score: result.analysis?.logic_score || 0,
+              clarity_score: result.analysis?.clarity_score || 0,
+              strengths: result.analysis?.strengths || [],
+              weaknesses: result.analysis?.weaknesses || [],
+              weak_portions: result.analysis?.weak_portions || [],
+              key_insights: result.analysis?.recommendations?.join('\n\n') || 'No specific insights available.',
+            };
+            
+            setAnalysisData(transformedAnalysis);
             setShowAnalysis(true);
           }
         } catch (error) {
@@ -163,6 +187,20 @@ export function DebateRoom({ selectedTopic }: DebateRoomProps) {
         topic={topic}
         sessionId={sessionIdRef.current || undefined}
       />
+    );
+  }
+
+  if (showDebate && isWaitingForPartner) {
+    return (
+      <div className="fixed inset-0 bg-gradient-to-br from-gray-900 via-emerald-900 to-gray-900 z-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
+          <div className="text-center mb-6">
+            <Loader className="animate-spin mx-auto mb-4 text-emerald-500" size={48} />
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">Waiting for Partner</h2>
+            <p className="text-gray-600">Your match request has been accepted. Waiting for your partner to accept...</p>
+          </div>
+        </div>
+      </div>
     );
   }
 

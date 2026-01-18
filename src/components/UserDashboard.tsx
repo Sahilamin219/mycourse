@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Video, TrendingUp, BookOpen, Award, Clock, BarChart, Calendar, Target, Brain, MessageCircle } from 'lucide-react';
+import * as api from '../api';
 
 interface DebateSession {
   id: string;
@@ -31,7 +32,7 @@ interface Material {
 }
 
 export function UserDashboard() {
-  const { user } = useAuth();
+  const { user, accessToken } = useAuth();
   const [sessions, setSessions] = useState<DebateSession[]>([]);
   const [performance, setPerformance] = useState<PerformanceMetrics | null>(null);
   const [materials, setMaterials] = useState<Material[]>([]);
@@ -44,48 +45,49 @@ export function UserDashboard() {
   }, [user]);
 
   const fetchDashboardData = async () => {
-    if (!user) return;
+    if (!user || !accessToken) return;
 
     try {
-      const { data: sessionsData } = await supabase
-        .from('debate_sessions')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(5);
+      const sessionsData = await api.getDebateSessions(accessToken);
 
       if (sessionsData) {
-        setSessions(sessionsData);
-      }
+        // Transform API response to match component expectations
+        const transformedSessions = sessionsData.slice(0, 5).map((session: any) => ({
+          id: session.id,
+          topic: session.topic,
+          duration: session.duration || 0,
+          opponent_name: 'Anonymous',
+          created_at: session.created_at,
+          skills_rating: {
+            communication: session.clarity_score || 0,
+            logic: session.logic_score || 0,
+            persuasion: session.persuasiveness_score || 0,
+          },
+        }));
+        setSessions(transformedSessions);
 
-      const { data: perfData } = await supabase
-        .from('debate_sessions')
-        .select('duration, communication_score, logic_score, persuasion_score, listening_score, emotional_intelligence_score')
-        .eq('user_id', user.id);
+        // Calculate performance metrics
+        if (sessionsData.length > 0) {
+          const totalDebates = sessionsData.length;
+          const totalTime = sessionsData.reduce((acc: number, s: any) => acc + (s.duration || 0), 0);
+          const avgCommunication = sessionsData.reduce((acc: number, s: any) => acc + (s.clarity_score || 0), 0) / totalDebates;
+          const avgLogic = sessionsData.reduce((acc: number, s: any) => acc + (s.logic_score || 0), 0) / totalDebates;
+          const avgPersuasion = sessionsData.reduce((acc: number, s: any) => acc + (s.persuasiveness_score || 0), 0) / totalDebates;
 
-      if (perfData && perfData.length > 0) {
-        const totalDebates = perfData.length;
-        const totalTime = perfData.reduce((acc, s) => acc + (s.duration || 0), 0);
-        const avgCommunication = perfData.reduce((acc, s) => acc + (s.communication_score || 0), 0) / totalDebates;
-        const avgLogic = perfData.reduce((acc, s) => acc + (s.logic_score || 0), 0) / totalDebates;
-        const avgPersuasion = perfData.reduce((acc, s) => acc + (s.persuasion_score || 0), 0) / totalDebates;
-        const avgListening = perfData.reduce((acc, s) => acc + (s.listening_score || 0), 0) / totalDebates;
-        const avgEmotionalIntelligence = perfData.reduce((acc, s) => acc + (s.emotional_intelligence_score || 0), 0) / totalDebates;
+          setPerformance({
+            total_debates: totalDebates,
+            total_time: Math.floor(totalTime / 60),
+            avg_communication: avgCommunication,
+            avg_logic: avgLogic,
+            avg_persuasion: avgPersuasion,
+            avg_listening: 0, // Not available in current schema
+            avg_emotional_intelligence: 0, // Not available in current schema
+          });
+        }
 
-        setPerformance({
-          total_debates: totalDebates,
-          total_time: Math.floor(totalTime / 60),
-          avg_communication: avgCommunication,
-          avg_logic: avgLogic,
-          avg_persuasion: avgPersuasion,
-          avg_listening: avgListening,
-          avg_emotional_intelligence: avgEmotionalIntelligence,
-        });
-      }
-
-      const topicCounts: { [key: string]: number } = {};
-      if (sessionsData) {
-        sessionsData.forEach(session => {
+        // Calculate topic counts
+        const topicCounts: { [key: string]: number } = {};
+        sessionsData.forEach((session: any) => {
           if (session.topic) {
             topicCounts[session.topic] = (topicCounts[session.topic] || 0) + 1;
           }

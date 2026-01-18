@@ -28,7 +28,18 @@ A debate platform application now powered by PostgreSQL database instead of Supa
    DATABASE_URL=postgresql://debateuser:your_password@localhost:5432/debatehub
    VITE_API_URL=http://localhost:8000
    JWT_SECRET_KEY=your-secure-secret-key
+   VITE_GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
    ```
+   
+   **Google OAuth Setup (Optional):**
+   - Go to [Google Cloud Console](https://console.cloud.google.com/)
+   - Create a new project or select an existing one
+   - Enable Google+ API
+   - Go to "Credentials" → "Create Credentials" → "OAuth client ID"
+   - Choose "Web application"
+   - Add authorized JavaScript origins: `http://localhost:3000`, `http://localhost:5173`
+   - Add authorized redirect URIs: `http://localhost:3000`, `http://localhost:5173`
+   - Copy the Client ID and add it to `.env` as `VITE_GOOGLE_CLIENT_ID`
 
 4. **Install backend dependencies:**
    ```bash
